@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- GreenPilot backend - multi-module build (same layout as the course skeleton: core / iam / api) -->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>tn.supcom.greenpilot</groupId>
+  <artifactId>greenpilot</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <modules>
+    <module>core</module>   <!-- shared: base entities, UUIDv7, ETag, JWT verification, error mappers -->
+    <module>iam</module>    <!-- iam.war: OAuth 2.0 authorization server (Authorization Code + PKCE) -->
+    <module>api</module>    <!-- greenpilot.war: REST + WebSocket + MQTT middleware -->
+  </modules>
+
+  <properties>
+    <maven.compiler.release>25</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <jakartaee.version>11.0.0</jakartaee.version>
+    <microprofile-config.version>3.1</microprofile-config.version>
+    <jnosql.version>1.1.16</jnosql.version>
+    <mongodb.driver.version>5.9.1</mongodb.driver.version>
+    <paho.version>1.2.5</paho.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>jakarta.platform</groupId>
+        <artifactId>jakarta.jakartaee-api</artifactId>
+        <version>${jakartaee.version}</version>
+        <scope>provided</scope>
+      </dependency>
+      <!-- MicroProfile Config is provided by WildFly -->
+      <dependency>
+        <groupId>org.eclipse.microprofile.config</groupId>
+        <artifactId>microprofile-config-api</artifactId>
+        <version>${microprofile-config.version}</version>
+        <scope>provided</scope>
+      </dependency>
+      <!-- Eclipse JNoSQL = implementation of Jakarta NoSQL + Jakarta Data for MongoDB (bundled in the WARs) -->
+      <dependency>
+        <groupId>org.eclipse.jnosql.databases</groupId>
+        <artifactId>jnosql-mongodb</artifactId>
+        <version>${jnosql.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.mongodb</groupId>
+        <artifactId>mongodb-driver-sync</artifactId>
+        <version>${mongodb.driver.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.paho</groupId>
+        <artifactId>org.eclipse.paho.mqttv5.client</artifactId>
+        <version>${paho.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>tn.supcom.greenpilot</groupId>
+        <artifactId>core</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.14.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-war-plugin</artifactId>
+          <version>3.4.0</version>
+          <configuration>
+            <failOnMissingWebXml>false</failOnMissingWebXml>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+</project>

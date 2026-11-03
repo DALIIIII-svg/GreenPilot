@@ -1,0 +1,10 @@
+# generated / downloaded locally - never commit
+tools/
+**/target/
+archive/
+*.log
+
+# editor and assistant tooling
+.idea/
+.vscode/
+.github/modernize/
