@@ -1,0 +1,9 @@
+{
+  "kind": "VISION",
+  "version": "0.1.0",
+  "artifactUri": "file:///models/yolo-leaf/0.1.0/model_ncnn.zip",
+  "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "metrics": { "mAP50": 0.0, "mAP50_95": 0.0 },
+  "datasetRef": "pepper-leaf-dataset@v0",
+  "notes": "placeholder until the first real training - put the real SHA-256 of the zip here"
+}

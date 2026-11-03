@@ -1,0 +1,14 @@
+{
+  "id": "greenhouse-01",
+  "name": "SUP'COM demo greenhouse",
+  "lat": 36.8925,
+  "lng": 10.1882,
+  "address": "SUP'COM, Ariana (approximate coordinates)",
+  "gatewayId": "pi-01",
+  "zones": [
+    { "id": "A", "name": "Zone A", "plants": [ { "id": "pepper-1", "name": "Bell pepper 1", "species": "Capsicum annuum" } ] },
+    { "id": "B", "name": "Zone B", "plants": [ { "id": "pepper-2", "name": "Bell pepper 2", "species": "Capsicum annuum" } ] }
+  ],
+  "irrigation": { "maxDurationSec": 30, "cooldownSec": 120 },
+  "thresholds": { "soilMoistureLowPct": 35 }
+}

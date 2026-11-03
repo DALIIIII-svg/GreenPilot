@@ -1,0 +1,29 @@
+{
+  "siteId": "greenhouse-01",
+  "kind": "ESP32_NODE",
+  "name": "Field node (ESP32-WROOM)",
+  "zoneIds": ["A", "B"],
+  "thingDescription": {
+    "@context": "https://www.w3.org/2022/wot/td/v1.1",
+    "id": "urn:greenpilot:greenhouse-01:esp32-node",
+    "title": "GreenPilot field node",
+    "description": "PLACEHOLDER hrefs - replace with the real Node-RED endpoints once implemented",
+    "securityDefinitions": { "bearer_sc": { "scheme": "bearer" } },
+    "security": "bearer_sc",
+    "properties": {
+      "soilMoistureA": { "type": "number", "unit": "percent", "readOnly": true, "forms": [ { "href": "https://pi-01.local/things/esp32-node/properties/soilMoistureA" } ] },
+      "soilMoistureB": { "type": "number", "unit": "percent", "readOnly": true, "forms": [ { "href": "https://pi-01.local/things/esp32-node/properties/soilMoistureB" } ] },
+      "airTemperature": { "type": "number", "unit": "degree Celsius", "readOnly": true, "forms": [ { "href": "https://pi-01.local/things/esp32-node/properties/airTemperature" } ] },
+      "pumpState": { "type": "string", "enum": ["OFF", "ON"], "readOnly": true, "forms": [ { "href": "https://pi-01.local/things/esp32-node/properties/pumpState" } ] }
+    },
+    "actions": {
+      "irrigate": {
+        "input": { "type": "object", "properties": { "durationSec": { "type": "integer", "minimum": 1, "maximum": 30 } }, "required": ["durationSec"] },
+        "forms": [ { "href": "https://pi-01.local/things/esp32-node/actions/irrigate" } ]
+      }
+    },
+    "events": {
+      "lowWater": { "data": { "type": "boolean" }, "forms": [ { "href": "wss://pi-01.local/things/esp32-node/events/lowWater", "subprotocol": "websocket" } ] }
+    }
+  }
+}
