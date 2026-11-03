@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GreenPilot live demo</title>
+<!-- Development test page served by greenpilot.war: OAuth 2.0 + PKCE login, REST calls, WebSocket push.
+     The real PWA (later) will reuse exactly this logic. -->
+<style>
+  :root { --bg:#f4f6f3; --card:#fff; --ink:#1d2a20; --muted:#5b6b5f; --accent:#2f6f3e; --warn:#b3261e; --line:#dfe5df; }
+  body { margin:0; font:15px/1.45 system-ui, sans-serif; background:var(--bg); color:var(--ink); }
+  header { display:flex; gap:12px; align-items:center; justify-content:space-between; padding:14px 16px; background:var(--card); border-bottom:1px solid var(--line); }
+  h1 { font-size:18px; margin:0; } h2 { font-size:15px; margin:0 0 10px; }
+  main { display:grid; gap:14px; padding:16px; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); max-width:1200px; margin:auto; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; min-width:0; }
+  button { background:var(--accent); color:#fff; border:0; border-radius:8px; padding:8px 12px; font:inherit; cursor:pointer; }
+  button.secondary { background:#e8eee8; color:var(--ink); }
+  table { width:100%; border-collapse:collapse; font-size:14px; } td, th { text-align:left; padding:5px 4px; border-bottom:1px solid var(--line); }
+  .stale { color:var(--warn); font-weight:600; } .muted { color:var(--muted); font-size:13px; }
+  #log { font:12px/1.4 ui-monospace, monospace; max-height:340px; overflow:auto; white-space:pre-wrap; word-break:break-all; margin:0; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; } input { padding:7px; border:1px solid var(--line); border-radius:8px; width:80px; }
+  .incident { border:1px solid var(--line); border-radius:10px; padding:10px; margin-bottom:8px; } img { max-width:100%; border-radius:8px; }
+  .dot { width:10px; height:10px; border-radius:50%; background:#bbb; display:inline-block; } .dot.on { background:#3aa655; }
+</style>
+</head>
+<body>
+<header>
+  <h1>GreenPilot · live demo</h1>
+  <div class="row"><span class="dot" id="wsdot"></span><span id="who" class="muted">not signed in</span>
+    <button id="login">Sign in</button><button id="logout" class="secondary" hidden>Sign out</button></div>
+</header>
+<main>
+  <section><h2>Sensors <span class="muted" id="site"></span></h2><table id="readings"><tr><td class="muted">Sign in to load</td></tr></table></section>
+  <section><h2>Irrigation</h2>
+    <div class="row"><input id="dur" type="number" min="1" max="30" value="10"> s <button id="water">Water now</button></div>
+    <p id="irr" class="muted"></p></section>
+  <section><h2>Open incidents</h2><div id="incidents" class="muted">—</div></section>
+  <section><h2>Live events (WebSocket)</h2><pre id="log"></pre></section>
+</main>
+<script>
+const IAM = '/iam', API = '/greenpilot/api', SITE = 'greenhouse-01';
+const CLIENT_ID = 'greenpilot-pwa', REDIRECT = location.origin + location.pathname;
+const SCOPE = 'greenhouse:read greenhouse:control incidents:manage admin';
+let token = null, refresh = null;
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const b64url = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const store = { get:k => { try { return sessionStorage.getItem(k); } catch { return null; } },
+                set:(k,v) => { try { sessionStorage.setItem(k,v); } catch {} }, del:k => { try { sessionStorage.removeItem(k); } catch {} } };
+
+// ---- OAuth 2.0 Authorization Code + PKCE (the verifier never leaves this tab)
+async function login() {
+  const verifier = b64url(crypto.getRandomValues(new Uint8Array(32)));
+  const challenge = b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
+  const state = crypto.randomUUID();
+  store.set('pkce', JSON.stringify({ verifier, state }));
+  location = IAM + '/authorize?' + new URLSearchParams({ client_id: CLIENT_ID, redirect_uri: REDIRECT, response_type: 'code',
+    scope: SCOPE, state, code_challenge: challenge, code_challenge_method: 'S256' });
+}
+async function tokenRequest(params) {
+  const r = await fetch(IAM + '/token', { method: 'POST', body: new URLSearchParams({ client_id: CLIENT_ID, ...params }) });
+  const body = await r.json();
+  if (!r.ok) throw new Error(body.error_description || body.error);
+  token = body.access_token; refresh = body.refresh_token;
+  setTimeout(() => tokenRequest({ grant_type: 'refresh_token', refresh_token: refresh }).catch(log), (body.expires_in - 60) * 1000);
+}
+async function handleCallback() {
+  const q = new URLSearchParams(location.search);
+  if (!q.has('code') && !q.has('error')) return false;
+  history.replaceState(null, '', REDIRECT); // remove the code from the address bar
+  const saved = JSON.parse(store.get('pkce') || '{}'); store.del('pkce');
+  if (q.get('error')) throw new Error(q.get('error_description') || q.get('error'));
+  if (q.get('state') !== saved.state) throw new Error('state mismatch');
+  await tokenRequest({ grant_type: 'authorization_code', code: q.get('code'), redirect_uri: REDIRECT, code_verifier: saved.verifier });
+  return true;
+}
+
+// ---- REST with ETags
+async function api(path, opts = {}) {
+  const r = await fetch(API + path, { ...opts, headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', ...(opts.headers || {}) } });
+  if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(`HTTP ${r.status} ${e.error || ''}`); }
+  return { etag: r.headers.get('ETag'), body: r.status === 204 ? null : await r.json() };
+}
+async function loadState() {
+  const { body } = await api(`/sites/${SITE}/state`);
+  $('site').textContent = '· ' + body.site.name;
+  $('readings').innerHTML = '<tr><th>Sensor</th><th>Zone</th><th>Value</th><th>Age</th></tr>' + body.readings.map(r =>
+    `<tr><td>${esc(r.type)}</td><td>${esc(r.zoneId || '—')}</td><td>${esc(r.value)} ${esc(r.unit || '')}</td>
+     <td class="${r.stale ? 'stale' : 'muted'}">${r.ageSec}s${r.stale ? ' stale' : ''}</td></tr>`).join('');
+  const c = body.lastIrrigation;
+  $('irr').textContent = c ? `Last: ${c.durationSec}s, ${c.status} (${new Date(c.issuedAt).toLocaleTimeString()})` : 'No irrigation yet';
+}
+async function loadIncidents() {
+  const { body } = await api(`/incidents?siteId=${SITE}&status=OPEN,ACKNOWLEDGED`);
+  $('incidents').innerHTML = body.length ? '' : 'None';
+  for (const i of body) {
+    const div = document.createElement('div'); div.className = 'incident';
+    div.innerHTML = `<b>${esc(i.plantId)}</b> · ${esc(i.label)} · score ${esc(i.lastScore)} · ${esc(i.status)} · ${i.occurrences}×
+      <div class="row" style="margin-top:6px"></div>`;
+    const actions = div.querySelector('.row');
+    const btn = (label, fn) => { const b = document.createElement('button'); b.textContent = label; b.className = 'secondary'; b.onclick = () => fn().then(loadIncidents).catch(log); actions.append(b); };
+    const withEtag = async (suffix, body) => { const cur = await api('/incidents/' + i.id);
+      return api(`/incidents/${i.id}/${suffix}`, { method: 'POST', body: JSON.stringify(body || {}), headers: { 'If-Match': cur.etag } }); };
+    if (i.status === 'OPEN') btn('Acknowledge', () => withEtag('ack'));
+    btn('Confirm', () => withEtag('review', { verdict: 'CONFIRMED' }));
+    btn('Reject', () => withEtag('review', { verdict: 'REJECTED' }));
+    if (i.status === 'ACKNOWLEDGED' && i.reviews.length) btn('Close', () => withEtag('close', { note: 'closed from live demo' }));
+    $('incidents').append(div);
+    // evidence image: <img src> cannot send the token, so fetch + blob URL
+    const details = (await api('/incidents/' + i.id)).body;
+    const key = details.events.at(-1)?.imageKey;
+    if (key) { const r = await fetch(`${API}/images/${key}`, { headers: { Authorization: 'Bearer ' + token } });
+      if (r.ok) { const img = new Image(); img.src = URL.createObjectURL(await r.blob()); img.alt = 'evidence'; div.append(img); } }
+  }
+}
+
+// ---- WebSocket push: authenticate with the first message (no token in the URL)
+function connect() {
+  const ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/greenpilot/ws');
+  ws.onopen = () => ws.send(JSON.stringify({ type: 'auth', token }));
+  ws.onmessage = e => {
+    const m = JSON.parse(e.data);
+    if (m.type === 'auth_ok') { $('wsdot').classList.add('on'); return; }
+    log(`${new Date().toLocaleTimeString()}  ${m.type}  ${JSON.stringify(m.data).slice(0, 160)}`);
+    if (m.type === 'telemetry' || m.type === 'command') loadState().catch(log);
+    if (m.type.startsWith('incident')) loadIncidents().catch(log);
+  };
+  ws.onclose = () => { $('wsdot').classList.remove('on'); if (token) setTimeout(connect, 3000); };
+}
+function log(x) { $('log').textContent = (x instanceof Error ? '⚠ ' + x.message : x) + '\n' + $('log').textContent; }
+
+$('login').onclick = () => login().catch(log);
+$('logout').onclick = () => { token = null; location = REDIRECT; };
+$('water').onclick = () => api('/irrigation', { method: 'POST', body: JSON.stringify({ siteId: SITE, durationSec: +$('dur').value }) })
+  .then(r => log('irrigation command ' + r.body.id + ' ' + r.body.status)).catch(log);
+
+(async () => {
+  try {
+    if (!await handleCallback()) return;
+    const me = (await api('/users/me')).body;
+    $('who').textContent = (me.profile.displayName || me.profile.username) + ' · ' + me.roles.join(', ');
+    $('login').hidden = true; $('logout').hidden = false;
+    await Promise.all([loadState(), loadIncidents()]);
+    connect();
+  } catch (e) { log(e); }
+})();
+</script>
+</body>
+</html>
