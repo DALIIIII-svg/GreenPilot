@@ -17,7 +17,7 @@ GreenPilot/
 Each module follows **Boundary – Control – Entity**: `boundaries` (REST/WebSocket/MQTT contracts),
 `controllers` (managers = business logic, repositories = Jakarta Data), `entities` (Jakarta NoSQL).
 
-## Quick start (PowerShell, in `Documents\GreenPilot`)
+## Quick start (PowerShell, from the repository root)
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\setup\setup-windows.ps1     # once
@@ -27,6 +27,24 @@ powershell -ExecutionPolicy Bypass -File .\setup\build.ps1             # window 
 powershell -ExecutionPolicy Bypass -File .\samples\test-flow.ps1
 ```
 Then open <http://localhost:8080/greenpilot/live-demo.html> (sign in: `admin@greenpilot.local` / `admin123`).
+
+## Frontend web (React)
+
+The user interface is in `frontend/`. It is a React 18 + TypeScript single-page app built with Vite. It uses React Router for navigation, TanStack Query and Axios for API data, Recharts for charts, Leaflet/React Leaflet for maps, Lucide icons, Tailwind CSS, and custom CSS. OAuth sign-in uses Authorization Code with PKCE.
+
+### Run the frontend locally
+
+Start MongoDB, Mosquitto, and the WildFly middleware first if you want authentication and live API data. Then open a second PowerShell window at the repository root and run:
+
+```powershell
+cd .\frontend
+npm install
+npm run dev
+```
+
+Open <http://localhost:5500>. Keep the Vite terminal open while using the app. The frontend proxies `/iam` and `/greenpilot` to the middleware at `http://localhost:8080`. The OAuth callback is registered as `http://localhost:5500/callback.html`; use this exact URL and port for sign-in. If port 5500 is already occupied, stop the process using it before starting Vite, since the configured callback must match the registered port.
+
+Create a production build with `npm run build` from `frontend/`; the generated files are written to `frontend/dist/`. More frontend and backend integration details are in [`frontend/README.md`](frontend/README.md).
 
 ## Security model
 | Layer | Mechanism |
