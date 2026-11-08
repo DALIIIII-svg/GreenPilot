@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1f5f3a">
+  <title>Signing in… · GreenPilot</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <section class="signin">
+    <div class="signin-card">
+      <img src="icons/icon.svg" alt="" width="56" height="56">
+      <p id="message">Signing you in…</p>
+      <a id="back" class="btn btn-primary btn-wide" href="./" hidden>Back to sign in</a>
+    </div>
+  </section>
+  <script type="module">
+    import { completeLogin } from './js/auth.js';
+
+    completeLogin(location.search)
+      .then(() => location.replace('./#/dashboard'))
+      .catch((error) => {
+        document.getElementById('message').textContent = error.message;
+        document.getElementById('back').hidden = false;
+      });
+  </script>
+</body>
+</html>
