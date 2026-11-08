@@ -1,1 +1,0 @@
-export const endpoints = { me: '/users/me', sites: '/sites', devices: '/devices', measurements: '/measurements', forecasts: '/forecasts', inspections: '/inspections', irrigation: '/irrigation', incidents: '/incidents', models: '/models', audit: '/audit' } as const;
