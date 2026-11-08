@@ -1,0 +1,16 @@
+export type Role = 'ADMIN' | 'GROWER';
+export type Profile = { id: string; username?: string; displayName?: string; siteIds?: string[]; version?: number };
+export type MeView = { profile: Profile; roles: Role[]; scopes: string[] };
+export type Zone = { id: string; name?: string; plants?: { id: string; name?: string }[] };
+export type Site = { id: string; name: string; location?: { type?: string; coordinates?: [number, number] }; address?: string; gatewayId?: string; zones: Zone[]; irrigation?: { minDurationSec?: number; maxDurationSec?: number; cooldownSec?: number }; thresholds?: Record<string, number>; version?: number; etag?: string };
+export type Reading = { id: string; siteId: string; zoneId?: string; type: string; value: number; unit?: string; ts: string; ageSec?: number; stale?: boolean; quality?: string };
+export type Measurement = Reading;
+export type Forecast = { id: string; zoneId?: string; ts: string; horizonMin?: number; predicted?: number; baseline?: number; type?: string };
+export type Inspection = { id: string; siteId: string; zoneId?: string; plantId?: string; ts: string; status?: string; detections?: { cls: string; score: number; bbox?: number[] }[]; modelVersion?: string };
+export type Command = { id: string; siteId: string; type: string; status: string; durationSec?: number; issuedAt: string; updatedAt?: string };
+export type DashboardState = { site: Site; readings: Reading[]; forecasts: Forecast[]; lastIrrigation?: Command; openIncidents: number; serverTime: string };
+export type Incident = { id: string; siteId: string; plantId: string; zoneId?: string; label: string; status: string; openedAt: string; lastSeenAt: string; occurrences: number; lastScore?: number; modelVersion?: string; reviews?: { verdict: string; note?: string; ts?: string }[]; version?: number };
+export type IncidentDetails = { incident: Incident; events: { imageKey?: string; detections?: { cls: string; score: number; bbox?: number[] }[]; ts: string }[] };
+export type Device = { id: string; siteId: string; kind: string; name?: string; zoneIds?: string[]; updatedAt?: string; status?: string; version?: number };
+export type ModelRelease = { id: string; kind: string; modelVersion: string; artifactUri: string; sha256: string; metrics?: Record<string, number>; deployments?: { siteId: string; commandId: string; at: string }[]; createdAt: string };
+export type AuditEntry = { id: string; username?: string; subject?: string; action: string; siteId?: string; details?: string; ts: string };
