@@ -8,8 +8,8 @@ function loadLeaflet() {
   if (window.L) return Promise.resolve(window.L);
   if (!leaflet) {
     leaflet = new Promise((resolve, reject) => {
-      document.head.append(h('link', { rel: 'stylesheet', href: 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css' }));
-      const script = h('script', { src: 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js' });
+      document.head.append(h('link', { rel: 'stylesheet', href: 'vendor/leaflet/leaflet.css' }));
+      const script = h('script', { src: 'vendor/leaflet/leaflet.js' });
       script.onload = () => resolve(window.L);
       script.onerror = () => {
         leaflet = null;
