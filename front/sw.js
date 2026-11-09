@@ -1,4 +1,4 @@
-const CACHE = 'greenpilot-v1';
+const CACHE = 'greenpilot-v2';
 const SHELL = [
   './',
   'index.html',
@@ -21,6 +21,8 @@ const SHELL = [
   'js/pages/incident.js',
   'js/pages/history.js',
   'js/pages/nearby.js',
+  'vendor/leaflet/leaflet.js',
+  'vendor/leaflet/leaflet.css',
   'js/pages/admin-sites.js',
   'js/pages/admin-users.js',
   'js/pages/admin-models.js',
