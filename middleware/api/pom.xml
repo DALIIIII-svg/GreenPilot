@@ -19,6 +19,14 @@
 
   <dependencies>
     <dependency>
+      <groupId>org.eclipse.jnosql.databases</groupId>
+      <artifactId>jnosql-mongodb</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.mongodb</groupId>
+      <artifactId>mongodb-driver-sync</artifactId>
+    </dependency>
+    <dependency>
       <groupId>jakarta.platform</groupId>
       <artifactId>jakarta.jakartaee-api</artifactId>
     </dependency>

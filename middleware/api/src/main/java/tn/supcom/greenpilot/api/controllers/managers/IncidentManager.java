@@ -139,7 +139,9 @@ public class IncidentManager {
         Set<String> allowed = access.accessibleSites(user);
         if (siteId != null) access.requireSite(user, siteId);
         List<Incident> result;
-        if (siteId != null) {
+        if (siteId != null && statuses != null && !statuses.isEmpty()) {
+            result = incidents.findBySiteIdAndStatusInOrderByLastSeenAtDesc(siteId, statuses);
+        } else if (siteId != null) {
             result = template.select(Incident.class).where("siteId").eq(siteId).orderBy("lastSeenAt").desc().result();
         } else {
             result = template.select(Incident.class).orderBy("lastSeenAt").desc().result();
