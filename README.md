@@ -4,13 +4,13 @@ Cloud of Things project (SUP'COM): connected greenhouse, bounded irrigation, vis
 
 ```
 GreenPilot/
-├── middleware/                  Maven multi-module build (same layout as the course skeleton)
+├── middleware/                  Maven multi-module build
 │   ├── core/                    shared jar: NosqlEntity, UUIDv7, ETag, EdDSA JWT verification, @Secured, error mappers
 │   ├── iam/   -> iam.war        OAuth 2.0 authorization server (Authorization Code + PKCE), /iam
 │   └── api/   -> greenpilot.war REST + WebSocket + MQTT v5 middleware, /greenpilot
+├── front/                       PWA in plain HTML/CSS/JavaScript (no framework, no build step)
 ├── setup/                       Windows scripts: install, certificates, MQTT ACL, build, run
 ├── samples/                     test data + end-to-end test (simulates the Pi and the PWA)
-├── archive/middleware-v1/       first version (single module), kept for comparison
 └── tools/                       JDK 25, Maven, WildFly 41, certificates, broker config (generated, not in git)
 ```
 
@@ -23,28 +23,49 @@ Each module follows **Boundary – Control – Entity**: `boundaries` (REST/WebS
 powershell -ExecutionPolicy Bypass -File .\setup\setup-windows.ps1     # once
 powershell -ExecutionPolicy Bypass -File .\setup\start-mosquitto.ps1   # window 1
 powershell -ExecutionPolicy Bypass -File .\setup\run-wildfly.ps1       # window 2 (MongoDB must be running)
-powershell -ExecutionPolicy Bypass -File .\setup\build.ps1             # window 3
-powershell -ExecutionPolicy Bypass -File .\samples\test-flow.ps1
-```
-Then open <http://localhost:8080/greenpilot/live-demo.html> (sign in: `admin@greenpilot.local` / `admin123`).
-
-## Frontend web (React)
-
-The user interface is in `frontend/`. It is a React 18 + TypeScript single-page app built with Vite. It uses React Router for navigation, TanStack Query and Axios for API data, Recharts for charts, Leaflet/React Leaflet for maps, Lucide icons, Tailwind CSS, and custom CSS. OAuth sign-in uses Authorization Code with PKCE.
-
-### Run the frontend locally
-
-Start MongoDB, Mosquitto, and the WildFly middleware first if you want authentication and live API data. Then open a second PowerShell window at the repository root and run:
-
-```powershell
-cd .\frontend
-npm install
-npm run dev
+powershell -ExecutionPolicy Bypass -File .\setup\build.ps1             # window 3: build and deploy the WARs
+powershell -ExecutionPolicy Bypass -File .\samples\test-flow.ps1       # optional: sample site, readings and an incident
+powershell -ExecutionPolicy Bypass -File .\setup\serve-front.ps1       # window 4: the PWA
 ```
 
-Open <http://localhost:5500>. Keep the Vite terminal open while using the app. The frontend proxies `/iam` and `/greenpilot` to the middleware at `http://localhost:8080`. The OAuth callback is registered as `http://localhost:5500/callback.html`; use this exact URL and port for sign-in. If port 5500 is already occupied, stop the process using it before starting Vite, since the configured callback must match the registered port.
+Open <http://localhost:5500> and sign in with `admin@greenpilot.local` / `admin123`.
+Use `localhost` (not `127.0.0.1`) and port 5500: the IAM only accepts the registered redirect URI
+`http://localhost:5500/callback.html`. `serve-front.ps1` needs Node.js (`npx`) or Python.
 
-Create a production build with `npm run build` from `frontend/`; the generated files are written to `frontend/dist/`. More frontend and backend integration details are in [`frontend/README.md`](frontend/README.md).
+A minimal test page is also served by WildFly at <http://localhost:8080/greenpilot/live-demo.html>.
+
+## Front-end (PWA)
+
+`front/` is a single-page app written in plain HTML, CSS and JavaScript modules, served as static files.
+It talks to the middleware on `http://localhost:8080` (CORS is enabled for development).
+
+| Page | Who | What |
+|---|---|---|
+| Dashboard | grower, admin | latest readings, soil moisture forecast, 24 h chart, irrigation |
+| Incidents / incident detail | grower, admin | disease alerts, photo with detection boxes, acknowledge → review → close |
+| History | grower, admin | measurements, forecast vs measured, camera inspections, CSV export |
+| Nearby | grower, admin | map of the greenhouses, search around the phone's location |
+| Sites & devices | admin | greenhouses, zones, limits, devices and their Thing Descriptions |
+| Users & access | admin | accounts, roles and the greenhouses each person can see |
+| Models & audit | admin | model releases, deployment and rollback per greenhouse, audit log |
+
+```
+front/
+├── index.html, callback.html    app shell and OAuth redirect page
+├── manifest.webmanifest, sw.js  installable app + offline cache of the app files
+├── css/style.css
+├── icons/
+├── vendor/leaflet/              map library (Leaflet 1.9.4, BSD-2-Clause)
+└── js/
+    ├── config.js, auth.js       endpoints, sign-in with Authorization Code + PKCE, token refresh
+    ├── api.js, live.js          REST client (Bearer, ETag / If-Match), WebSocket with reconnect
+    ├── router.js, state.js      hash router, current user and selected greenhouse
+    ├── ui.js                    DOM helpers, tables, dialogs, SVG line chart
+    └── pages/                   one module per page
+```
+
+Sign-in uses the public client `greenpilot-pwa`. Tokens are kept in `localStorage`; the API calls are
+never cached by the service worker. The live updates come from the WebSocket below.
 
 ## Security model
 | Layer | Mechanism |
@@ -96,4 +117,5 @@ Messages are validated (JSON-B + Bean Validation); ids are deterministic so a re
 ## Known limitations / next steps
 - Dev only: self-signed CA, signing key stored in MongoDB, default passwords in `setup/env.ps1`.
 - `Instant` fields are stored by JNoSQL as ISO-8601 text (sortable); two values inside the same second may sort slightly off.
-- HTTPS + Nginx (PWA and `/api` on one origin), automated tests (JUnit + Testcontainers), CI.
+- The PWA and the API run on two origins (5500 and 8080) in development; in production, Nginx with HTTPS should serve both on one origin.
+- Automated tests (JUnit + Testcontainers) and CI.

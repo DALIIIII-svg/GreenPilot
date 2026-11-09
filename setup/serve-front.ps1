@@ -1,5 +1,5 @@
 # Serves the front-end on http://localhost:5500 (the redirect URI registered in the IAM).
-# Start the backend first with start-all.ps1.
+# Start Mosquitto and WildFly first (start-mosquitto.ps1, run-wildfly.ps1).
 $Root = Split-Path -Parent $PSScriptRoot
 $Front = Join-Path $Root "front"
 
