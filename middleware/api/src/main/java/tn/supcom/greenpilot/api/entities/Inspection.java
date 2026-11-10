@@ -25,7 +25,7 @@ public class Inspection extends NosqlEntity {
     @Column
     private Instant ts;
     @Column
-    private String status;    // HEALTHY | DISEASE_SUSPECTED | INCONCLUSIVE
+    private InspectionStatus status;
     @Column
     private List<Detection> detections = new ArrayList<>();
     @Column
@@ -54,8 +54,8 @@ public class Inspection extends NosqlEntity {
     public void setZoneId(String zoneId) { this.zoneId = zoneId; }
     public Instant getTs() { return ts; }
     public void setTs(Instant ts) { this.ts = ts; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public InspectionStatus getStatus() { return status; }
+    public void setStatus(InspectionStatus status) { this.status = status; }
     public List<Detection> getDetections() { return detections; }
     public void setDetections(List<Detection> detections) { this.detections = detections; }
     public Integer getImageW() { return imageW; }

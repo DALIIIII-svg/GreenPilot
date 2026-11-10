@@ -8,7 +8,7 @@ import java.time.Instant;
 @Embeddable(Embeddable.EmbeddableType.GROUPING)
 public class Review {
     @Column
-    private String verdict;   // CONFIRMED | REJECTED
+    private Verdict verdict;
     @Column
     private String note;
     @Column
@@ -17,8 +17,8 @@ public class Review {
     private Instant at;
 
     // ---- getters / setters (generated)
-    public String getVerdict() { return verdict; }
-    public void setVerdict(String verdict) { this.verdict = verdict; }
+    public Verdict getVerdict() { return verdict; }
+    public void setVerdict(Verdict verdict) { this.verdict = verdict; }
     public String getNote() { return note; }
     public void setNote(String note) { this.note = note; }
     public String getBy() { return by; }

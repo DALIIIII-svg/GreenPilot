@@ -8,13 +8,13 @@ import java.time.Instant;
 @Embeddable(Embeddable.EmbeddableType.GROUPING)
 public class StatusChange {
     @Column
-    private String status;
+    private CommandStatus status;
     @Column
     private String reason;
     @Column
     private Instant at;
 
-    public static StatusChange of(String status, String reason) {
+    public static StatusChange of(CommandStatus status, String reason) {
         StatusChange s = new StatusChange();
         s.status = status;
         s.reason = reason;
@@ -23,8 +23,8 @@ public class StatusChange {
     }
 
     // ---- getters / setters (generated)
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public CommandStatus getStatus() { return status; }
+    public void setStatus(CommandStatus status) { this.status = status; }
     public String getReason() { return reason; }
     public void setReason(String reason) { this.reason = reason; }
     public Instant getAt() { return at; }

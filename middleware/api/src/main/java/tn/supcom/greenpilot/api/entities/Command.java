@@ -13,13 +13,13 @@ public class Command extends NosqlEntity {
     public static final String COLLECTION = "commands";
 
     @Column
-    private String type;      // IRRIGATE | DEPLOY_MODEL | UPDATE_CONFIG
+    private CommandType type;
     @Column
     private String siteId;
     @Column
     private String gatewayId;
     @Column
-    private String status;
+    private CommandStatus status;
     @Column
     private Instant issuedAt;
     @Column
@@ -36,14 +36,14 @@ public class Command extends NosqlEntity {
     private List<StatusChange> history = new ArrayList<>();
 
     // ---- getters / setters (generated)
-    public String getType() { return type; }
-    public void setType(String type) { this.type = type; }
+    public CommandType getType() { return type; }
+    public void setType(CommandType type) { this.type = type; }
     public String getSiteId() { return siteId; }
     public void setSiteId(String siteId) { this.siteId = siteId; }
     public String getGatewayId() { return gatewayId; }
     public void setGatewayId(String gatewayId) { this.gatewayId = gatewayId; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public CommandStatus getStatus() { return status; }
+    public void setStatus(CommandStatus status) { this.status = status; }
     public Instant getIssuedAt() { return issuedAt; }
     public void setIssuedAt(Instant issuedAt) { this.issuedAt = issuedAt; }
     public Instant getExpiresAt() { return expiresAt; }

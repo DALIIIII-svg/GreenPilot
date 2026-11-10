@@ -15,7 +15,7 @@ public class Device extends NosqlEntity {
     @Column
     private String siteId;
     @Column
-    private String kind;      // ESP32_NODE | CAMERA | GATEWAY
+    private DeviceKind kind;
     @Column
     private String name;
     @Column
@@ -28,8 +28,8 @@ public class Device extends NosqlEntity {
     // ---- getters / setters (generated)
     public String getSiteId() { return siteId; }
     public void setSiteId(String siteId) { this.siteId = siteId; }
-    public String getKind() { return kind; }
-    public void setKind(String kind) { this.kind = kind; }
+    public DeviceKind getKind() { return kind; }
+    public void setKind(DeviceKind kind) { this.kind = kind; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public List<String> getZoneIds() { return zoneIds; }

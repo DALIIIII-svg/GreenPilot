@@ -18,6 +18,7 @@ import tn.supcom.greenpilot.api.boundaries.dto.SensorReading;
 import tn.supcom.greenpilot.api.boundaries.dto.SiteRequest;
 import tn.supcom.greenpilot.api.controllers.repositories.SiteRepository;
 import tn.supcom.greenpilot.api.entities.Forecast;
+import tn.supcom.greenpilot.api.entities.CommandType;
 import tn.supcom.greenpilot.api.entities.GeoPoint;
 import tn.supcom.greenpilot.api.entities.Incident;
 import tn.supcom.greenpilot.api.entities.Measurement;
@@ -100,7 +101,7 @@ public class SiteManager {
                         .add("irrigation", toJson(saved.getIrrigation()))
                         .add("thresholds", toJson(saved.getThresholds()))
                         .build();
-                commands.send(user, saved, "UPDATE_CONFIG", cfg);
+                commands.send(user, saved, CommandType.UPDATE_CONFIG, cfg);
             } catch (WebApplicationException e) {
                 LOG.warning("Configuration saved but not pushed to " + saved.getGatewayId() + " (broker unreachable)");
             }
@@ -217,7 +218,7 @@ public class SiteManager {
         }
         List<Incident> open = template.select(Incident.class).where("siteId").eq(siteId)
                 .and("status").in(IncidentManager.ACTIVE).result();
-        return new DashboardState(site, readings, forecasts, commands.lastOfType(siteId, "IRRIGATE"), open.size(), now);
+        return new DashboardState(site, readings, forecasts, commands.lastOfType(siteId, CommandType.IRRIGATE), open.size(), now);
     }
 
     @PreDestroy

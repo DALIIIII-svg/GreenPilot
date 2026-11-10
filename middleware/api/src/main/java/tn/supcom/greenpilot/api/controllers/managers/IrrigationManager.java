@@ -6,6 +6,8 @@ import jakarta.json.Json;
 import jakarta.nosql.Template;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import tn.supcom.greenpilot.api.entities.Command;
+import tn.supcom.greenpilot.api.entities.CommandStatus;
+import tn.supcom.greenpilot.api.entities.CommandType;
 import tn.supcom.greenpilot.api.entities.IrrigationLimits;
 import tn.supcom.greenpilot.api.entities.Measurement;
 import tn.supcom.greenpilot.api.entities.Site;
@@ -50,16 +52,16 @@ public class IrrigationManager {
         if (reservoir.getValue() == null || reservoir.getValue() == 0) throw ApiError.conflict("Reservoir level too low - irrigation refused");
 
         // 3. one command at a time + cooldown between waterings
-        Command previous = commands.lastOfType(siteId, "IRRIGATE");
+        Command previous = commands.lastOfType(siteId, CommandType.IRRIGATE);
         if (previous != null) {
-            String status = previous.getStatus();
-            if ("PENDING".equals(status) || "ACCEPTED".equals(status)) throw ApiError.conflict("Another irrigation command is still in progress");
-            if ("COMPLETED".equals(status)) {
+            CommandStatus status = previous.getStatus();
+            if (status == CommandStatus.PENDING || status == CommandStatus.ACCEPTED) throw ApiError.conflict("Another irrigation command is still in progress");
+            if (status == CommandStatus.COMPLETED) {
                 long since = Duration.between(previous.getIssuedAt(), Instant.now()).toSeconds();
                 if (since < cooldown) throw ApiError.conflict("Cooldown active: wait " + (cooldown - since) + " s");
             }
         }
-        return commands.send(user, site, "IRRIGATE",
+        return commands.send(user, site, CommandType.IRRIGATE,
                 Json.createObjectBuilder().add("durationSec", durationSec).add("source", "MANUAL").build());
     }
 }

@@ -15,6 +15,8 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import tn.supcom.greenpilot.api.boundaries.mqtt.CommandAckMessage;
 import tn.supcom.greenpilot.api.controllers.repositories.CommandRepository;
 import tn.supcom.greenpilot.api.entities.Command;
+import tn.supcom.greenpilot.api.entities.CommandStatus;
+import tn.supcom.greenpilot.api.entities.CommandType;
 import tn.supcom.greenpilot.api.entities.Site;
 import tn.supcom.greenpilot.api.entities.StatusChange;
 import tn.supcom.greenpilot.core.boundaries.ApiError;
@@ -55,13 +57,13 @@ public class CommandManager {
         scheduler.scheduleWithFixedDelay(this::expireStale, 30, 30, TimeUnit.SECONDS);
     }
 
-    public Command send(AuthenticatedUser user, Site site, String type, JsonObject fields) {
+    public Command send(AuthenticatedUser user, Site site, CommandType type, JsonObject fields) {
         if (site.getGatewayId() == null) throw ApiError.conflict("Site '" + site.getId() + "' has no gateway registered");
         Instant now = Instant.now();
         Instant expires = now.plusSeconds(ttlSeconds);
         String commandId = UUIDv7.next();
         String payload = Json.createObjectBuilder(fields)
-                .add("commandId", commandId).add("action", type)
+                .add("commandId", commandId).add("action", type.name())
                 .add("issuedAt", now.toString()).add("expiresAt", expires.toString())
                 .build().toString();
 
@@ -70,24 +72,24 @@ public class CommandManager {
         c.setType(type);
         c.setSiteId(site.getId());
         c.setGatewayId(site.getGatewayId());
-        c.setStatus("PENDING");
+        c.setStatus(CommandStatus.PENDING);
         c.setIssuedAt(now);
         c.setExpiresAt(expires);
         c.setRequestedBy(user.username());
         c.setDurationSec(fields.containsKey("durationSec") ? fields.getInt("durationSec") : null);
         c.setPayload(payload);
-        c.getHistory().add(StatusChange.of("PENDING", null));
+        c.getHistory().add(StatusChange.of(CommandStatus.PENDING, null));
         commands.save(c);
 
         try {
             mqtt.publishCommand(site.getGatewayId(), commandId, payload, ttlSeconds);
         } catch (Exception e) {
-            c.setStatus("SEND_FAILED");
-            c.getHistory().add(StatusChange.of("SEND_FAILED", e.getMessage()));
+            c.setStatus(CommandStatus.SEND_FAILED);
+            c.getHistory().add(StatusChange.of(CommandStatus.SEND_FAILED, e.getMessage()));
             commands.save(c);
             throw ApiError.of(Response.Status.SERVICE_UNAVAILABLE, "MQTT broker unreachable - command not sent");
         }
-        audit.log(user, "COMMAND_" + type, site.getId(), payload);
+        audit.log(user, "COMMAND_" + type.name(), site.getId(), payload);
         events.push(site.getId(), "command", c);
         return c;
     }
@@ -100,12 +102,13 @@ public class CommandManager {
             LOG.warning("Ack for unknown command " + id);
             return;
         }
-        c.setStatus(ack.status());
+        CommandStatus status = CommandStatus.valueOf(ack.status());
+        c.setStatus(status);
         c.setUpdatedAt(Instant.now());
-        c.getHistory().add(StatusChange.of(ack.status(), ack.reason()));
+        c.getHistory().add(StatusChange.of(status, ack.reason()));
         commands.save(c);
         // a model becomes "active" only when the Pi confirms deployment + smoke test
-        if ("DEPLOY_MODEL".equals(c.getType()) && "COMPLETED".equals(ack.status())) {
+        if (c.getType() == CommandType.DEPLOY_MODEL && status == CommandStatus.COMPLETED) {
             try (JsonReader r = Json.createReader(new StringReader(c.getPayload()))) {
                 JsonObject p = r.readObject();
                 sites.activateModel(site.getId(), p.getString("kind"), p.getString("version"));
@@ -114,14 +117,14 @@ public class CommandManager {
         events.push(site.getId(), "command", c);
     }
 
-    public Command lastOfType(String siteId, String type) {
-        List<Command> last = template.select(Command.class).where("siteId").eq(siteId).and("type").eq(type)
+    public Command lastOfType(String siteId, CommandType type) {
+        List<Command> last = template.select(Command.class).where("siteId").eq(siteId).and("type").eq(type.name())
                 .orderBy("issuedAt").desc().limit(1).result();
         return last.isEmpty() ? null : last.getFirst();
     }
 
-    public List<Command> history(String siteId, String type, int limit) {
-        return template.select(Command.class).where("siteId").eq(siteId).and("type").eq(type)
+    public List<Command> history(String siteId, CommandType type, int limit) {
+        return template.select(Command.class).where("siteId").eq(siteId).and("type").eq(type.name())
                 .orderBy("issuedAt").desc().limit(limit).result();
     }
 
@@ -129,18 +132,18 @@ public class CommandManager {
     void expireStale() {
         try {
             Instant now = Instant.now();
-            List<Command> pending = template.select(Command.class).where("status").eq("PENDING")
+            List<Command> pending = template.select(Command.class).where("status").eq(CommandStatus.PENDING.name())
                     .and("expiresAt").lt(now).result();
-            for (Command c : pending) mark(c, "EXPIRED");
-            List<Command> accepted = template.select(Command.class).where("status").eq("ACCEPTED")
+            for (Command c : pending) mark(c, CommandStatus.EXPIRED);
+            List<Command> accepted = template.select(Command.class).where("status").eq(CommandStatus.ACCEPTED.name())
                     .and("issuedAt").lt(now.minusSeconds(UNCONFIRMED_AFTER_SECONDS)).result();
-            for (Command c : accepted) mark(c, "UNCONFIRMED");
+            for (Command c : accepted) mark(c, CommandStatus.UNCONFIRMED);
         } catch (RuntimeException e) {
             LOG.fine("Command expiry skipped: " + e.getMessage());
         }
     }
 
-    private void mark(Command c, String status) {
+    private void mark(Command c, CommandStatus status) {
         c.setStatus(status);
         c.setUpdatedAt(Instant.now());
         c.getHistory().add(StatusChange.of(status, null));
