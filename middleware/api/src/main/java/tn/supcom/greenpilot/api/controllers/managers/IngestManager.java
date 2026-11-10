@@ -23,6 +23,7 @@ import tn.supcom.greenpilot.api.controllers.repositories.MeasurementRepository;
 import tn.supcom.greenpilot.api.controllers.repositories.SiteRepository;
 import tn.supcom.greenpilot.api.entities.Forecast;
 import tn.supcom.greenpilot.api.entities.Inspection;
+import tn.supcom.greenpilot.api.entities.InspectionStatus;
 import tn.supcom.greenpilot.api.entities.Measurement;
 import tn.supcom.greenpilot.api.entities.Site;
 
@@ -128,7 +129,7 @@ public class IngestManager {
         e.setPlantId(i.plantId());
         e.setZoneId(i.zoneId());
         e.setTs(i.ts());
-        e.setStatus(i.status());
+        e.setStatus(InspectionStatus.valueOf(i.status()));
         e.setDetections(i.detections() == null ? new ArrayList<>() : new ArrayList<>(i.detections()));
         e.setImageW(i.imageW());
         e.setImageH(i.imageH());

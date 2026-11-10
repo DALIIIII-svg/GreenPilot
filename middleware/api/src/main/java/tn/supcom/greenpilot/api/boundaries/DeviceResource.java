@@ -21,6 +21,7 @@ import tn.supcom.greenpilot.api.controllers.managers.AuditManager;
 import tn.supcom.greenpilot.api.controllers.managers.SiteManager;
 import tn.supcom.greenpilot.api.controllers.repositories.DeviceRepository;
 import tn.supcom.greenpilot.api.entities.Device;
+import tn.supcom.greenpilot.api.entities.DeviceKind;
 import tn.supcom.greenpilot.core.boundaries.ApiError;
 import tn.supcom.greenpilot.core.boundaries.Conditional;
 import tn.supcom.greenpilot.core.controllers.MongoAccess;
@@ -93,7 +94,7 @@ public class DeviceResource {
             device.setId(id);
         }
         device.setSiteId(body.siteId());
-        device.setKind(body.kind());
+        device.setKind(DeviceKind.valueOf(body.kind()));
         device.setName(body.name());
         device.setZoneIds(body.zoneIds() == null ? new ArrayList<>() : new ArrayList<>(body.zoneIds()));
         device.setThingDescription(body.thingDescription() == null ? null : body.thingDescription().toString());

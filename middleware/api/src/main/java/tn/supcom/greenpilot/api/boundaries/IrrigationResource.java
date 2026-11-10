@@ -31,6 +31,7 @@ import tn.supcom.greenpilot.api.controllers.managers.AccessManager;
 import tn.supcom.greenpilot.api.controllers.managers.CommandManager;
 import tn.supcom.greenpilot.api.controllers.managers.IrrigationManager;
 import tn.supcom.greenpilot.api.entities.Command;
+import tn.supcom.greenpilot.api.entities.CommandType;
 
 import java.net.URI;
 import java.util.List;
@@ -59,6 +60,6 @@ public class IrrigationResource {
     public List<Command> history(@QueryParam("siteId") String siteId,
                                  @QueryParam("limit") @DefaultValue("50") @Min(1) @Max(500) int limit) {
         access.requireSite(Principals.of(securityContext), siteId);
-        return commands.history(siteId, "IRRIGATE", limit);
+        return commands.history(siteId, CommandType.IRRIGATE, limit);
     }
 }

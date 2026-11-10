@@ -13,8 +13,10 @@ import tn.supcom.greenpilot.api.controllers.repositories.DiseaseEventRepository;
 import tn.supcom.greenpilot.api.controllers.repositories.IncidentRepository;
 import tn.supcom.greenpilot.api.entities.DiseaseEvent;
 import tn.supcom.greenpilot.api.entities.Incident;
+import tn.supcom.greenpilot.api.entities.IncidentStatus;
 import tn.supcom.greenpilot.api.entities.Review;
 import tn.supcom.greenpilot.api.entities.Site;
+import tn.supcom.greenpilot.api.entities.Verdict;
 import tn.supcom.greenpilot.core.boundaries.ApiError;
 import tn.supcom.greenpilot.core.controllers.MongoAccess;
 import tn.supcom.greenpilot.core.security.AuthenticatedUser;
@@ -39,7 +41,7 @@ import static com.mongodb.client.model.Filters.eq;
 public class IncidentManager {
 
     private static final Logger LOG = Logger.getLogger(IncidentManager.class.getName());
-    public static final List<String> ACTIVE = List.of("OPEN", "ACKNOWLEDGED");
+    public static final List<String> ACTIVE = List.of(IncidentStatus.OPEN.name(), IncidentStatus.ACKNOWLEDGED.name());
 
     @Inject IncidentRepository incidents;
     @Inject DiseaseEventRepository diseaseEvents;
@@ -84,7 +86,7 @@ public class IncidentManager {
             incident.setPlantId(msg.plantId());
             incident.setZoneId(msg.zoneId());
             incident.setLabel(e.getLabel());
-            incident.setStatus("OPEN");
+            incident.setStatus(IncidentStatus.OPEN);
             incident.setOpenedAt(msg.ts());
             applyEvent(incident, msg);
             incidents.save(incident);
@@ -148,7 +150,7 @@ public class IncidentManager {
         }
         return result.stream()
                 .filter(i -> allowed == null || allowed.contains(i.getSiteId()))
-                .filter(i -> statuses == null || statuses.isEmpty() || statuses.contains(i.getStatus()))
+                .filter(i -> statuses == null || statuses.isEmpty() || statuses.contains(i.getStatus().name()))
                 .limit(limit).toList();
     }
 
@@ -168,9 +170,9 @@ public class IncidentManager {
     // ------------------------------------------------------------------ grower workflow
 
     public Incident acknowledge(AuthenticatedUser user, Incident incident) {
-        if (!"OPEN".equals(incident.getStatus())) throw ApiError.conflict("Only an OPEN incident can be acknowledged");
+        if (incident.getStatus() != IncidentStatus.OPEN) throw ApiError.conflict("Only an OPEN incident can be acknowledged");
         Incident i = update(incident, x -> {
-            x.setStatus("ACKNOWLEDGED");
+            x.setStatus(IncidentStatus.ACKNOWLEDGED);
             x.setAcknowledgedBy(user.username());
             x.setAcknowledgedAt(Instant.now());
         });
@@ -180,10 +182,10 @@ public class IncidentManager {
     }
 
     public Incident review(AuthenticatedUser user, Incident incident, ReviewRequest body) {
-        if ("CLOSED".equals(incident.getStatus())) throw ApiError.conflict("Incident is closed");
+        if (incident.getStatus() == IncidentStatus.CLOSED) throw ApiError.conflict("Incident is closed");
         Incident i = update(incident, x -> {
             Review r = new Review();
-            r.setVerdict(body.verdict());
+            r.setVerdict(Verdict.valueOf(body.verdict()));
             r.setNote(body.note());
             r.setBy(user.username());
             r.setAt(Instant.now());
@@ -195,10 +197,10 @@ public class IncidentManager {
     }
 
     public Incident close(AuthenticatedUser user, Incident incident, String note) {
-        if (!"ACKNOWLEDGED".equals(incident.getStatus())) throw ApiError.conflict("Acknowledge the incident before closing it");
+        if (incident.getStatus() != IncidentStatus.ACKNOWLEDGED) throw ApiError.conflict("Acknowledge the incident before closing it");
         if (incident.getReviews().isEmpty()) throw ApiError.conflict("Review the incident before closing it");
         Incident i = update(incident, x -> {
-            x.setStatus("CLOSED");
+            x.setStatus(IncidentStatus.CLOSED);
             x.setClosedBy(user.username());
             x.setClosedAt(Instant.now());
             x.setCloseNote(note);

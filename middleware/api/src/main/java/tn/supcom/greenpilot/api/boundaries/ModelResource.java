@@ -34,8 +34,10 @@ import tn.supcom.greenpilot.api.controllers.managers.CommandManager;
 import tn.supcom.greenpilot.api.controllers.managers.SiteManager;
 import tn.supcom.greenpilot.api.controllers.repositories.ModelReleaseRepository;
 import tn.supcom.greenpilot.api.entities.Command;
+import tn.supcom.greenpilot.api.entities.CommandType;
 import tn.supcom.greenpilot.api.entities.Deployment;
 import tn.supcom.greenpilot.api.entities.ModelRelease;
+import tn.supcom.greenpilot.api.entities.ModelKind;
 import tn.supcom.greenpilot.api.entities.Site;
 import tn.supcom.greenpilot.core.controllers.MongoAccess;
 import tn.supcom.greenpilot.core.utilities.UUIDv7;
@@ -68,7 +70,7 @@ public class ModelResource {
     @GET
     public List<ModelRelease> list(@QueryParam("kind") String kind) {
         return releases.findAll()
-                .filter(r -> kind == null || kind.equals(r.getKind()))
+                .filter(r -> kind == null || kind.equals(r.getKind().name()))
                 .sorted(Comparator.comparing(ModelRelease::getCreatedAt).reversed())
                 .toList();
     }
@@ -88,7 +90,7 @@ public class ModelResource {
         AuthenticatedUser user = Principals.of(securityContext);
         ModelRelease r = new ModelRelease();
         r.setId(UUIDv7.next());
-        r.setKind(body.kind());
+        r.setKind(ModelKind.valueOf(body.kind()));
         r.setModelVersion(body.version());
         r.setArtifactUri(body.artifactUri());
         r.setSha256(body.sha256().toLowerCase());
@@ -109,8 +111,8 @@ public class ModelResource {
         AuthenticatedUser user = Principals.of(securityContext);
         ModelRelease r = releases.findById(id).orElseThrow(() -> ApiError.notFound("Model release"));
         Site site = sites.get(body.siteId());
-        Command c = commands.send(user, site, "DEPLOY_MODEL", Json.createObjectBuilder()
-                .add("kind", r.getKind()).add("version", r.getModelVersion())
+        Command c = commands.send(user, site, CommandType.DEPLOY_MODEL, Json.createObjectBuilder()
+                .add("kind", r.getKind().name()).add("version", r.getModelVersion())
                 .add("artifactUri", r.getArtifactUri()).add("sha256", r.getSha256()).build());
         mongo.claimVersion(ModelRelease.COLLECTION, r.getId(), r.getVersion());
         Deployment d = new Deployment();

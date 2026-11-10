@@ -21,7 +21,7 @@ public class Incident extends NosqlEntity {
     @Column
     private String label;
     @Column
-    private String status;
+    private IncidentStatus status;
     @Column
     private Instant openedAt;
     @Column
@@ -56,8 +56,8 @@ public class Incident extends NosqlEntity {
     public void setZoneId(String zoneId) { this.zoneId = zoneId; }
     public String getLabel() { return label; }
     public void setLabel(String label) { this.label = label; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public IncidentStatus getStatus() { return status; }
+    public void setStatus(IncidentStatus status) { this.status = status; }
     public Instant getOpenedAt() { return openedAt; }
     public void setOpenedAt(Instant openedAt) { this.openedAt = openedAt; }
     public Instant getLastSeenAt() { return lastSeenAt; }

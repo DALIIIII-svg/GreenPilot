@@ -15,7 +15,7 @@ public class ModelRelease extends NosqlEntity {
     public static final String COLLECTION = "model_releases";
 
     @Column
-    private String kind;      // FORECAST | VISION
+    private ModelKind kind;
     @Column
     private String modelVersion;   // e.g. 1.2.0 ("version" is the optimistic-lock counter)
     @Column
@@ -36,8 +36,8 @@ public class ModelRelease extends NosqlEntity {
     private List<Deployment> deployments = new ArrayList<>();
 
     // ---- getters / setters (generated)
-    public String getKind() { return kind; }
-    public void setKind(String kind) { this.kind = kind; }
+    public ModelKind getKind() { return kind; }
+    public void setKind(ModelKind kind) { this.kind = kind; }
     public String getModelVersion() { return modelVersion; }
     public void setModelVersion(String modelVersion) { this.modelVersion = modelVersion; }
     public String getArtifactUri() { return artifactUri; }
