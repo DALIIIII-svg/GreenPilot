@@ -1,0 +1,3 @@
+# Front Office root and IAM hostname. Provision these directories on the WildFly host.
+default.path=/var/opt/wildfly/www/frontoffice
+default.aliases=user.your-domain.tld,iam.your-domain.tld

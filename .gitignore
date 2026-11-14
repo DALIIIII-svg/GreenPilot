@@ -21,6 +21,7 @@ archive/
 .env.*
 !.env.example
 !.env.*.example
+/setup/wildfly/properties/*.properties
 
 # Editor and assistant tooling
 .idea/

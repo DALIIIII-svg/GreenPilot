@@ -1,0 +1,8 @@
+// Serve the Front Office from WildFly's existing welcome-content file handler.
+// Keep these aliases in the default host so /iam remains available on iam.greenpilot.local.
+set pathTo=`:resolve-expression(expression=${default.path})`
+set aliasesTo=`:resolve-expression(expression=${default.aliases})`
+/subsystem=undertow/configuration=handler/file=welcome-content:write-attribute(name=path,value=$pathTo)
+/subsystem=undertow/server=default-server/host=default-host:write-attribute(name=alias,value=[$aliasesTo])
+/subsystem=undertow/server=default-server/host=default-host/location=\/:write-attribute(name=handler,value=welcome-content)
+reload

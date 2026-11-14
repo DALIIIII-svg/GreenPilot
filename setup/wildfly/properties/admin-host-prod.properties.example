@@ -1,0 +1,4 @@
+# Back Office virtual host. Provision this directory on the WildFly host.
+host.path=/var/opt/wildfly/www/backoffice
+host.aliases=admin.your-domain.tld
+host.key=admin

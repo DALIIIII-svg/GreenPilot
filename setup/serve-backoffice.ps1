@@ -1,5 +1,5 @@
-# Serves the Back Office on port 5501. With hosts.example configured, open http://admin.greenpilot.local:5501.
-# Start Mosquitto and WildFly first (start-mosquitto.ps1, run-wildfly.ps1).
+# Optional development server for the Back Office on port 5501.
+# The normal local deployment serves the frontend from WildFly via configure-wildfly-hosts.ps1.
 $Root = Split-Path -Parent $PSScriptRoot
 $BackOffice = Join-Path $Root "frontend\backoffice"
 

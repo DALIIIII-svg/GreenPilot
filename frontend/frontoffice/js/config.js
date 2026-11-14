@@ -1,9 +1,11 @@
-const localFrontend = ['user.greenpilot.local', 'admin.greenpilot.local'].includes(location.hostname);
+const frontendDomain = location.hostname.match(/^(?:user|admin)\.(.+)$/i)?.[1];
 const devServer = ['5500', '5501'].includes(location.port);
-const backend = localFrontend
-  ? 'http://api.greenpilot.local:8080'
+const servicePort = devServer ? ':8080' : location.port ? `:${location.port}` : '';
+const siblingOrigin = (service) => `${location.protocol}//${service}.${frontendDomain}${servicePort}`;
+const backend = frontendDomain
+  ? siblingOrigin('api')
   : devServer ? 'http://localhost:8080' : location.origin;
-const iam = localFrontend ? 'http://iam.greenpilot.local:8080/iam' : `${backend}/iam`;
+const iam = frontendDomain ? `${siblingOrigin('iam')}/iam` : `${backend}/iam`;
 
 export const config = {
   api: `${backend}/greenpilot/api`,

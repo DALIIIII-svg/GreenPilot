@@ -1,5 +1,5 @@
-# Serves the Front Office on port 5500. With hosts.example configured, open http://user.greenpilot.local:5500.
-# Start Mosquitto and WildFly first (start-mosquitto.ps1, run-wildfly.ps1).
+# Optional development server for the Front Office on port 5500.
+# The normal local deployment serves the frontend from WildFly via configure-wildfly-hosts.ps1.
 $Root = Split-Path -Parent $PSScriptRoot
 $Front = Join-Path $Root "frontend\frontoffice"
 

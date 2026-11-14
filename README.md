@@ -25,11 +25,19 @@ powershell -ExecutionPolicy Bypass -File .\setup\start-mosquitto.ps1   # window 
 powershell -ExecutionPolicy Bypass -File .\setup\run-wildfly.ps1       # window 2 (MongoDB must be running)
 powershell -ExecutionPolicy Bypass -File .\setup\build.ps1             # window 3: build and deploy the WARs
 powershell -ExecutionPolicy Bypass -File .\samples\test-flow.ps1       # optional: sample site, readings and an incident
-powershell -ExecutionPolicy Bypass -File .\setup\serve-front.ps1       # window 4: Front Office (growers)
-powershell -ExecutionPolicy Bypass -File .\setup\serve-backoffice.ps1  # window 5: Back Office (administrators)
 ```
 
-Open <http://localhost:5500> for the Front Office or <http://localhost:5501> for the Back Office. Optionally, configure the local names described in [Local domain setup](#local-domain-setup) and use <http://user.greenpilot.local:5500> or <http://admin.greenpilot.local:5501>. Use a grower account in the Front Office; the development administrator is `admin@greenpilot.local` / `admin123` for the Back Office. Both static server scripts need Node.js (`npx`) or Python.
+On first use, copy and edit the WildFly dev properties, then add the host mappings from `setup/hosts.example` to the Windows hosts file. After WildFly has started and `build.ps1` has deployed both WARs, run:
+
+```powershell
+Copy-Item .\setup\wildfly\properties\default-host-dev.properties.example .\setup\wildfly\properties\default-host-dev.properties
+Copy-Item .\setup\wildfly\properties\admin-host-dev.properties.example .\setup\wildfly\properties\admin-host-dev.properties
+Copy-Item .\setup\wildfly\properties\api-dev.properties.example .\setup\wildfly\properties\api-dev.properties
+# Edit default-host-dev.properties and admin-host-dev.properties with the absolute frontend paths.
+powershell -ExecutionPolicy Bypass -File .\setup\configure-wildfly-hosts.ps1
+```
+
+Open <http://user.greenpilot.local:8080> for the Front Office or <http://admin.greenpilot.local:8080> for the Back Office. Use a grower account in the Front Office; the development administrator is `admin@greenpilot.local` / `admin123` for the Back Office.
 
 A minimal test page is also served by WildFly at <http://localhost:8080/greenpilot/live-demo.html>.
 
@@ -39,19 +47,20 @@ For local development, the project can use these names:
 
 | Name | Responsibility | URL |
 |---|---|---|
-| `user.greenpilot.local` | Grower interface | `http://user.greenpilot.local:5500` |
-| `admin.greenpilot.local` | Administrator interface | `http://admin.greenpilot.local:5501` |
+| `user.greenpilot.local` | Grower interface served by WildFly | `http://user.greenpilot.local:8080` |
+| `admin.greenpilot.local` | Administrator interface served by WildFly | `http://admin.greenpilot.local:8080` |
 | `iam.greenpilot.local` | OAuth IAM | `http://iam.greenpilot.local:8080/iam` |
 | `api.greenpilot.local` | REST API and WebSocket | `http://api.greenpilot.local:8080/greenpilot/api` |
 
-The corresponding hosts entries are in [`setup/hosts.example`](setup/hosts.example). Add them to `C:\Windows\System32\drivers\etc\hosts` with administrator privileges. This maps the names to the local computer (`127.0.0.1`); it does not map ports or create separate server processes. Both WARs still run in WildFly on port 8080, while the two static frontends run on ports 5500 and 5501. The distinct hostname and frontend port combinations give the browser separate origins. The API still enforces role/scope authorization.
+The corresponding hosts entries are in [`setup/hosts.example`](setup/hosts.example). Add them to `C:\Windows\System32\drivers\etc\hosts` with administrator privileges. They map the names to the local computer; Undertow virtual hosts in WildFly distinguish Front Office, Back Office, and API traffic on port 8080. The IAM remains reachable at `/iam` on the default host. The API still enforces role/scope authorization.
 
-The IAM and API configuration files set the shared JWT issuer, JWKS endpoint and allowed browser origins. Restart/redeploy both WildFly applications after changing these values. The IAM redirect URI list includes both domain-based callbacks and the localhost callbacks. The hosts entries are needed for the IAM and API aliases used by the configured services. The localhost frontend URLs remain available when those entries are present; the named frontend URLs are the recommended local workflow.
+The IAM and API configuration files set the shared JWT issuer, JWKS endpoint and allowed browser origins. The WildFly-served Front Office and Back Office origins use port 8080 and are included in the local CORS and OAuth callback lists. The optional `serve-front.ps1` and `serve-backoffice.ps1` scripts still provide separate development servers on ports 5500/5501 for static-file iteration; those URLs are not the WildFly deployment workflow.
+
+WildFly CLI scripts and dev/prod property templates are documented in [`setup/wildfly/README.md`](setup/wildfly/README.md). Production deployments must set environment-specific issuer, JWKS, CORS, and OAuth redirect values on the server.
 
 ## Front-end (PWA)
 
-`frontend/frontoffice/` and `frontend/backoffice/` are independent single-page apps written in plain HTML, CSS and JavaScript modules, served as static files. The Front Office is at `http://localhost:5500`; the Back Office is at `http://localhost:5501`.
-The apps use distinct IAM and API hostnames when opened through the local domain aliases; the existing localhost URLs continue to work.
+`frontend/frontoffice/` and `frontend/backoffice/` are independent single-page apps written in plain HTML, CSS and JavaScript modules. In the standard deployment, Undertow serves them from WildFly's file handler on virtual hosts. The separate ports 5500/5501 are development-only alternatives.
 
 | Page | Who | What |
 |---|---|---|

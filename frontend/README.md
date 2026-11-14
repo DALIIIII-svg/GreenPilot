@@ -49,41 +49,34 @@ Both apps preserve the existing stack: plain HTML5, CSS, JavaScript ES modules, 
 
 ## 6. Installation
 
-No frontend dependency installation is required. Install the backend prerequisites as documented in the repository root README. The static server can use Node.js (`npx`) or Python; the existing PowerShell scripts choose the available server.
+No frontend dependency installation is required. Install the backend prerequisites as documented in the repository root README. In the standard workflow, WildFly serves the static frontend files through Undertow; no separate frontend server is required.
 
 ## 7. Configuration
 
-The frontend has no `.env` files: browser environment values are public, and the current setup uses explicit development configuration in each app's `js/config.js`. No credentials or signing keys belong in frontend files.
+The frontend has no `.env` files: browser environment values are public, and each app's `js/config.js` derives API, IAM, WebSocket and callback origins from the current host. No credentials or signing keys belong in frontend files.
 
-The local domain plan uses separate names while keeping the existing service ports and WildFly deployment:
+The WildFly-hosted local workflow uses distinct names on the same Undertow listener:
 
 | URL | Responsibility | Local target |
 |---|---|---|
-| `http://user.greenpilot.local:5500` | Grower Front Office | Static server for `frontend/frontoffice/` |
-| `http://admin.greenpilot.local:5501` | Administrator Back Office | Static server for `frontend/backoffice/` |
+| `http://user.greenpilot.local:8080` | Grower Front Office | WildFly Undertow file handler for `frontend/frontoffice/` |
+| `http://admin.greenpilot.local:8080` | Administrator Back Office | WildFly Undertow file handler for `frontend/backoffice/` |
 | `http://iam.greenpilot.local:8080/iam` | OAuth authorization, tokens, identities and JWKS | Existing IAM WAR on WildFly |
 | `http://api.greenpilot.local:8080/greenpilot/api` | GreenPilot REST API | Existing API WAR on WildFly |
 
-The example hosts entries are in [`../setup/hosts.example`](../setup/hosts.example). Add them to `C:\Windows\System32\drivers\etc\hosts` from an elevated editor. They map all four names to `127.0.0.1`. A hosts file resolves names only; it cannot map ports. Therefore the `:5500`, `:5501`, and `:8080` ports remain in the development URLs.
+The example hosts entries are in [`../setup/hosts.example`](../setup/hosts.example). Add them to `C:\Windows\System32\drivers\etc\hosts` from an elevated editor. They map all four names to `127.0.0.1`; WildFly's Undertow virtual hosts distinguish the names on port 8080. IAM stays on the default host alias at `/iam`, and the API deployment is routed through `api-host`.
 
-This gives the browser separate app origins and distinct IAM/API hostnames, but IAM and API still run in the same WildFly server process and port. The API and IAM CORS allowlist is configured by `gp.cors.origin` in their MicroProfile config files. The token issuer and API JWKS URL must use the same IAM hostname; these are set in the IAM and API configs. The OAuth public client is `greenpilot-pwa`. Its exact callbacks include `http://user.greenpilot.local:5500/callback.html` and `http://admin.greenpilot.local:5501/callback.html` as well as the localhost callbacks.
-
-For a different host name, update `js/config.js`, the IAM redirect allowlist, the API and IAM CORS origins, and the API's expected JWT issuer/JWKS URL together. In production, configure real DNS and HTTPS and use server-side configuration.
+The Undertow scripts and dev/prod property templates are in [`../setup/wildfly/`](../setup/wildfly/). The API and IAM CORS allowlists are configured with `gp.cors.origin`; OAuth callback URLs are in `gp.iam.pwa.redirect-uris`. Keep those values aligned with the frontend hostnames. In production, configure real DNS and HTTPS and supply the origin/redirect allowlists through server environment configuration.
 
 ## 8. Running the Applications
 
-Start MongoDB, then from the repository root start the IAM/API and broker using the existing setup scripts. Run each frontend in its own PowerShell window:
+Start MongoDB, WildFly and Mosquitto. Deploy the IAM/API WARs, copy the `*-dev.properties.example` files to local `.properties` files, set the two frontend paths, add the host mappings, and run [`setup/configure-wildfly-hosts.ps1`](../setup/configure-wildfly-hosts.ps1). Then open <http://user.greenpilot.local:8080> for growers and <http://admin.greenpilot.local:8080> for administrators. `http://localhost:8080` serves the Front Office too. Use an appropriate account for the selected application.
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\setup\serve-front.ps1
-powershell -ExecutionPolicy Bypass -File .\setup\serve-backoffice.ps1
-```
-
-With the hosts entries configured, use <http://user.greenpilot.local:5500> for growers and <http://admin.greenpilot.local:5501> for administrators. The localhost frontend URLs also remain supported when the hosts entries are present, because the API uses the IAM hostname to load JWKS keys. Restart/redeploy IAM and API after changing their MicroProfile configuration. Use an appropriate account for the selected application.
+The `setup/serve-front.ps1` and `setup/serve-backoffice.ps1` scripts remain optional development servers on ports 5500/5501. Restart/redeploy IAM and API after changing their MicroProfile configuration.
 
 ## 9. Build and Production
 
-There is no frontend build step. Deploy each directory's static files independently to its own static host or origin. Configure HTTPS, the backend/API origin, IAM callback allowlists, CORS, and WebSocket routing for the deployment. The root `setup/build.ps1` builds and deploys the Java backend WAR files; it does not build the frontends.
+There is no frontend build step. Publish `frontend/frontoffice/` and `frontend/backoffice/` to readable static directories on the WildFly host, then run the Undertow CLI scripts with the production property files. The root `setup/build.ps1` builds and deploys the Java backend WAR files; the frontend files are served directly from their configured filesystem paths. Configure HTTPS, DNS, OAuth callbacks, CORS and WebSocket access for the production origins. See [`../setup/wildfly/README.md`](../setup/wildfly/README.md) for commands and property templates.
 
 ## 10. Security Architecture
 
