@@ -1,4 +1,4 @@
-const CACHE = 'greenpilot-v2';
+const CACHE = 'greenpilot-backoffice-v3';
 const SHELL = [
   './',
   'index.html',
@@ -16,13 +16,6 @@ const SHELL = [
   'js/router.js',
   'js/state.js',
   'js/ui.js',
-  'js/pages/dashboard.js',
-  'js/pages/incidents.js',
-  'js/pages/incident.js',
-  'js/pages/history.js',
-  'js/pages/nearby.js',
-  'vendor/leaflet/leaflet.js',
-  'vendor/leaflet/leaflet.css',
   'js/pages/admin-sites.js',
   'js/pages/admin-users.js',
   'js/pages/admin-models.js',

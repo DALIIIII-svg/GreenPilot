@@ -1,7 +1,7 @@
-# Serves the front-end on http://localhost:5500 (the redirect URI registered in the IAM).
-# Start Mosquitto and WildFly first (start-mosquitto.ps1, run-wildfly.ps1).
+# Optional development server for the Front Office on port 5500.
+# The normal local deployment serves the frontend from WildFly via configure-wildfly-hosts.ps1.
 $Root = Split-Path -Parent $PSScriptRoot
-$Front = Join-Path $Root "front"
+$Front = Join-Path $Root "frontend\frontoffice"
 
 if (Get-Command npx -ErrorAction SilentlyContinue) {
     npx --yes http-server $Front -p 5500 -c-1

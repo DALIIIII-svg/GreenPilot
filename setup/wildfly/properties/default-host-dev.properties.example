@@ -1,0 +1,3 @@
+# Copy to default-host-dev.properties and replace the checkout path if needed.
+default.path=C:/path/to/GreenPilot/frontend/frontoffice
+default.aliases=localhost,user.greenpilot.local,iam.greenpilot.local

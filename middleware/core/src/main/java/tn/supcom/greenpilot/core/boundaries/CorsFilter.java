@@ -34,7 +34,14 @@ public class CorsFilter implements ContainerRequestFilter, ContainerResponseFilt
 
     @Override
     public void filter(ContainerRequestContext req, ContainerResponseContext res) {
-        res.getHeaders().putSingle("Access-Control-Allow-Origin", allowedOrigin);
+        String requestOrigin = req.getHeaderString("Origin");
+        if ("*".equals(allowedOrigin.trim())) {
+            res.getHeaders().putSingle("Access-Control-Allow-Origin", "*");
+        } else if (requestOrigin != null && java.util.Arrays.stream(allowedOrigin.split(","))
+                .map(String::trim).anyMatch(requestOrigin::equals)) {
+            res.getHeaders().putSingle("Access-Control-Allow-Origin", requestOrigin);
+            res.getHeaders().add("Vary", "Origin");
+        }
         res.getHeaders().putSingle("Access-Control-Allow-Headers", "Authorization, Content-Type, If-Match, If-None-Match");
         res.getHeaders().putSingle("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
         res.getHeaders().putSingle("Access-Control-Expose-Headers", "ETag, Location");

@@ -1,0 +1,6 @@
+# The deployment name must match the WAR deployed by the production pipeline.
+api.name=api
+api.version=1.0
+api.deployment=greenpilot.war
+api.aliases=api.your-domain.tld
+api.context=greenpilot

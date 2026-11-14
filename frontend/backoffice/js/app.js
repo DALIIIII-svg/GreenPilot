@@ -11,14 +11,10 @@ if ('serviceWorker' in navigator) {
 
 const $ = (id) => document.getElementById(id);
 
-route('/dashboard', () => import('./pages/dashboard.js'));
-route('/incidents', () => import('./pages/incidents.js'));
-route('/incidents/:id', () => import('./pages/incident.js'));
-route('/history', () => import('./pages/history.js'));
-route('/nearby', () => import('./pages/nearby.js'));
 route('/admin/sites', () => import('./pages/admin-sites.js'));
 route('/admin/users', () => import('./pages/admin-users.js'));
 route('/admin/models', () => import('./pages/admin-models.js'));
+
 
 function showOnline() {
   $('offline').hidden = navigator.onLine;
@@ -58,7 +54,6 @@ async function start() {
   }
   try {
     state.me = await api.get('/users/me');
-    await loadSites();
   } catch (error) {
     if (error.status === 0) {
       $('signin-button').textContent = 'Retry';
@@ -70,13 +65,24 @@ async function start() {
     return;
   }
 
+  if (!isAdmin()) {
+    showSignIn('This application is restricted to administrator accounts.');
+    $('signin-button').textContent = 'Sign out';
+    $('signin-button').onclick = logout;
+    return;
+  }
+
+  try {
+    await loadSites();
+  } catch (error) {
+    showSignIn(error.message);
+    return;
+  }
+
   $('signin').hidden = true;
   $('shell').hidden = false;
   $('me-name').textContent = state.me.profile?.displayName || state.me.profile?.username || '';
-  $('me-role').textContent = isAdmin() ? 'Administrator' : 'Grower';
-  document.querySelectorAll('[data-admin]').forEach((el) => {
-    el.hidden = !isAdmin();
-  });
+  $('me-role').textContent = 'Administrator';
   fillSitePicker();
 
   $('site-select').addEventListener('change', (e) => selectSite(e.target.value));
@@ -91,7 +97,7 @@ async function start() {
     $('live').textContent = on ? 'Live' : 'Reconnecting';
   });
   startLive();
-  startRouter($('view'), '/dashboard', markActive);
+  startRouter($('view'), '/admin/sites', markActive);
 }
 
 start();

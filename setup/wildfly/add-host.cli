@@ -1,0 +1,22 @@
+// Add or update a static-file virtual host (used for the Back Office).
+set pathTo=`:resolve-expression(expression=${host.path})`
+set aliasTo=`:resolve-expression(expression=${host.aliases})`
+set contentTo=`:resolve-expression(expression=${host.key}-content)`
+
+if (outcome != success) of /subsystem=undertow/configuration=handler/file=${host.key}-content:read-resource
+    /subsystem=undertow/configuration=handler/file=${host.key}-content:add(path=$pathTo)
+else
+    /subsystem=undertow/configuration=handler/file=${host.key}-content:write-attribute(name=path,value=$pathTo)
+end-if
+
+if (outcome != success) of /subsystem=undertow/server=default-server/host=${host.key}-host:read-resource
+    /subsystem=undertow/server=default-server/host=${host.key}-host:add(alias=[$aliasTo])
+else
+    /subsystem=undertow/server=default-server/host=${host.key}-host:write-attribute(name=alias,value=[$aliasTo])
+end-if
+
+if (outcome != success) of /subsystem=undertow/server=default-server/host=${host.key}-host/location=\/:read-resource
+    /subsystem=undertow/server=default-server/host=${host.key}-host/location=\/:add(handler=$contentTo)
+else
+    /subsystem=undertow/server=default-server/host=${host.key}-host/location=\/:write-attribute(name=handler,value=$contentTo)
+end-if

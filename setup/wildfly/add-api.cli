@@ -1,0 +1,18 @@
+// Route an existing GreenPilot WAR through a dedicated Undertow host.
+// CORS is enforced by the Jakarta application using GP_CORS_ORIGIN.
+set aliasTo=`:resolve-expression(expression=${api.aliases})`
+set deploymentTo=`:resolve-expression(expression=${api.deployment})`
+set logPrefix=`:resolve-expression(expression=${api.context}-${api.name}-${api.version})`
+
+if (outcome != success) of /subsystem=undertow/server=default-server/host=${api.name}-host:read-resource
+    /subsystem=undertow/server=default-server/host=${api.name}-host:add(alias=[$aliasTo],default-web-module=$deploymentTo)
+else
+    /subsystem=undertow/server=default-server/host=${api.name}-host:write-attribute(name=alias,value=[$aliasTo])
+    /subsystem=undertow/server=default-server/host=${api.name}-host:write-attribute(name=default-web-module,value=$deploymentTo)
+end-if
+
+if (outcome != success) of /subsystem=undertow/server=default-server/host=${api.name}-host/setting=access-log:read-resource
+    /subsystem=undertow/server=default-server/host=${api.name}-host/setting=access-log:add
+end-if
+/subsystem=undertow/server=default-server/host=${api.name}-host/setting=access-log:write-attribute(name=pattern,value="combined")
+/subsystem=undertow/server=default-server/host=${api.name}-host/setting=access-log:write-attribute(name=prefix,value=$logPrefix)

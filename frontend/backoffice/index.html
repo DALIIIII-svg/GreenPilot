@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1f5f3a">
+  <meta name="description" content="GreenPilot administrative console">
+  <title>GreenPilot Back Office</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <div id="offline" class="offline" hidden>You are offline. Live data will come back with the connection.</div>
+
+  <section id="signin" class="signin" hidden>
+    <div class="signin-card">
+      <img src="icons/icon.svg" alt="" width="56" height="56">
+      <h1>GreenPilot</h1>
+      <p>Sign in with an administrator account to manage GreenPilot.</p>
+      <p id="signin-error" class="alert" hidden></p>
+      <button id="signin-button" class="btn btn-primary btn-wide">Sign in</button>
+    </div>
+  </section>
+
+  <div id="shell" class="shell" hidden>
+    <aside class="sidebar">
+      <a class="brand" href="#/admin/sites"><img src="icons/icon.svg" alt="" width="32" height="32"> GreenPilot Admin</a>
+
+      <label id="site-picker" class="site-picker">
+        <span>Greenhouse</span>
+        <select id="site-select"></select>
+      </label>
+
+      <nav id="nav">
+        <a href="#/admin/sites">Sites &amp; devices</a>
+        <a href="#/admin/users">Users &amp; access</a>
+        <a href="#/admin/models">Models &amp; audit</a>
+      </nav>
+
+      <div class="me">
+        <span id="live" class="live">Connecting</span>
+        <p><strong id="me-name"></strong><small id="me-role"></small></p>
+        <button id="signout" class="btn btn-small">Sign out</button>
+      </div>
+    </aside>
+    <div id="scrim" class="scrim"></div>
+
+    <div class="main">
+      <header class="topbar">
+        <button id="menu" class="icon-btn" aria-label="Menu">&#9776;</button>
+        <span>GreenPilot · Back Office</span>
+      </header>
+      <main id="view"></main>
+    </div>
+  </div>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+</body>
+</html>

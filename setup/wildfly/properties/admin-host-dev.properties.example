@@ -1,0 +1,4 @@
+# Copy to admin-host-dev.properties and replace the checkout path if needed.
+host.path=C:/path/to/GreenPilot/frontend/backoffice
+host.aliases=admin.greenpilot.local
+host.key=admin

@@ -1,0 +1,6 @@
+# Add these entries to the Windows hosts file while running GreenPilot locally.
+# The hosts file maps names to an IP address; it does not map ports.
+127.0.0.1 user.greenpilot.local
+127.0.0.1 admin.greenpilot.local
+127.0.0.1 iam.greenpilot.local
+127.0.0.1 api.greenpilot.local
