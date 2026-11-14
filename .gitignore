@@ -1,10 +1,32 @@
-# generated / downloaded locally - never commit
-tools/
+# Generated and local tooling
+/tools/
 **/target/
 archive/
 *.log
 
-# editor and assistant tooling
+# Frontend generated output and local dependencies
+**/node_modules/
+**/dist/
+**/build/
+**/.next/
+**/.nuxt/
+**/.angular/
+**/.cache/
+**/coverage/
+**/playwright-report/
+**/test-results/
+
+# Local environment files (keep .env.example files tracked)
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Editor and assistant tooling
 .idea/
 .vscode/
 .github/modernize/
+*.swp
+*.tmp
+.DS_Store
+Thumbs.db

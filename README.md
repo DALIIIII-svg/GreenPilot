@@ -8,7 +8,7 @@ GreenPilot/
 │   ├── core/                    shared jar: NosqlEntity, UUIDv7, ETag, EdDSA JWT verification, @Secured, error mappers
 │   ├── iam/   -> iam.war        OAuth 2.0 authorization server (Authorization Code + PKCE), /iam
 │   └── api/   -> greenpilot.war REST + WebSocket + MQTT v5 middleware, /greenpilot
-├── front/                       PWA in plain HTML/CSS/JavaScript (no framework, no build step)
+├── frontend/                    Front Office and Back Office PWAs (plain HTML/CSS/JavaScript)
 ├── setup/                       Windows scripts: install, certificates, MQTT ACL, build, run
 ├── samples/                     test data + end-to-end test (simulates the Pi and the PWA)
 └── tools/                       JDK 25, Maven, WildFly 41, certificates, broker config (generated, not in git)
@@ -25,37 +25,50 @@ powershell -ExecutionPolicy Bypass -File .\setup\start-mosquitto.ps1   # window 
 powershell -ExecutionPolicy Bypass -File .\setup\run-wildfly.ps1       # window 2 (MongoDB must be running)
 powershell -ExecutionPolicy Bypass -File .\setup\build.ps1             # window 3: build and deploy the WARs
 powershell -ExecutionPolicy Bypass -File .\samples\test-flow.ps1       # optional: sample site, readings and an incident
-powershell -ExecutionPolicy Bypass -File .\setup\serve-front.ps1       # window 4: the PWA
+powershell -ExecutionPolicy Bypass -File .\setup\serve-front.ps1       # window 4: Front Office (growers)
+powershell -ExecutionPolicy Bypass -File .\setup\serve-backoffice.ps1  # window 5: Back Office (administrators)
 ```
 
-Open <http://localhost:5500> and sign in with `admin@greenpilot.local` / `admin123`.
-Use `localhost` (not `127.0.0.1`) and port 5500: the IAM only accepts the registered redirect URI
-`http://localhost:5500/callback.html`. `serve-front.ps1` needs Node.js (`npx`) or Python.
+Open <http://localhost:5500> for the Front Office or <http://localhost:5501> for the Back Office. Optionally, configure the local names described in [Local domain setup](#local-domain-setup) and use <http://user.greenpilot.local:5500> or <http://admin.greenpilot.local:5501>. Use a grower account in the Front Office; the development administrator is `admin@greenpilot.local` / `admin123` for the Back Office. Both static server scripts need Node.js (`npx`) or Python.
 
 A minimal test page is also served by WildFly at <http://localhost:8080/greenpilot/live-demo.html>.
 
+## Local domain setup
+
+For local development, the project can use these names:
+
+| Name | Responsibility | URL |
+|---|---|---|
+| `user.greenpilot.local` | Grower interface | `http://user.greenpilot.local:5500` |
+| `admin.greenpilot.local` | Administrator interface | `http://admin.greenpilot.local:5501` |
+| `iam.greenpilot.local` | OAuth IAM | `http://iam.greenpilot.local:8080/iam` |
+| `api.greenpilot.local` | REST API and WebSocket | `http://api.greenpilot.local:8080/greenpilot/api` |
+
+The corresponding hosts entries are in [`setup/hosts.example`](setup/hosts.example). Add them to `C:\Windows\System32\drivers\etc\hosts` with administrator privileges. This maps the names to the local computer (`127.0.0.1`); it does not map ports or create separate server processes. Both WARs still run in WildFly on port 8080, while the two static frontends run on ports 5500 and 5501. The distinct hostname and frontend port combinations give the browser separate origins. The API still enforces role/scope authorization.
+
+The IAM and API configuration files set the shared JWT issuer, JWKS endpoint and allowed browser origins. Restart/redeploy both WildFly applications after changing these values. The IAM redirect URI list includes both domain-based callbacks and the localhost callbacks. The hosts entries are needed for the IAM and API aliases used by the configured services. The localhost frontend URLs remain available when those entries are present; the named frontend URLs are the recommended local workflow.
+
 ## Front-end (PWA)
 
-`front/` is a single-page app written in plain HTML, CSS and JavaScript modules, served as static files.
-It talks to the middleware on `http://localhost:8080` (CORS is enabled for development).
+`frontend/frontoffice/` and `frontend/backoffice/` are independent single-page apps written in plain HTML, CSS and JavaScript modules, served as static files. The Front Office is at `http://localhost:5500`; the Back Office is at `http://localhost:5501`.
+The apps use distinct IAM and API hostnames when opened through the local domain aliases; the existing localhost URLs continue to work.
 
 | Page | Who | What |
 |---|---|---|
-| Dashboard | grower, admin | latest readings, soil moisture forecast, 24 h chart, irrigation |
-| Incidents / incident detail | grower, admin | disease alerts, photo with detection boxes, acknowledge → review → close |
-| History | grower, admin | measurements, forecast vs measured, camera inspections, CSV export |
-| Nearby | grower, admin | map of the greenhouses, search around the phone's location |
+| Dashboard | grower | latest readings, soil moisture forecast, 24 h chart, irrigation |
+| Incidents / incident detail | grower | disease alerts, photo with detection boxes, acknowledge → review → close |
+| History | grower | measurements, forecast vs measured, camera inspections, CSV export |
+| Nearby | grower | map of the greenhouses, search around the phone's location |
 | Sites & devices | admin | greenhouses, zones, limits, devices and their Thing Descriptions |
 | Users & access | admin | accounts, roles and the greenhouses each person can see |
 | Models & audit | admin | model releases, deployment and rollback per greenhouse, audit log |
 
 ```
-front/
-├── index.html, callback.html    app shell and OAuth redirect page
-├── manifest.webmanifest, sw.js  installable app + offline cache of the app files
+frontend/frontoffice/
+├── index.html, callback.html    user app shell and OAuth redirect page
+├── manifest.webmanifest, sw.js  installable app + offline cache of the user app
 ├── css/style.css
-├── icons/
-├── vendor/leaflet/              map library (Leaflet 1.9.4, BSD-2-Clause)
+├── icons/, vendor/leaflet/      icons and map library (Leaflet 1.9.4, BSD-2-Clause)
 └── js/
     ├── config.js, auth.js       endpoints, sign-in with Authorization Code + PKCE, token refresh
     ├── api.js, live.js          REST client (Bearer, ETag / If-Match), WebSocket with reconnect

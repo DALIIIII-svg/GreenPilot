@@ -1,7 +1,7 @@
-# Serves the front-end on http://localhost:5500 (the redirect URI registered in the IAM).
+# Serves the Front Office on port 5500. With hosts.example configured, open http://user.greenpilot.local:5500.
 # Start Mosquitto and WildFly first (start-mosquitto.ps1, run-wildfly.ps1).
 $Root = Split-Path -Parent $PSScriptRoot
-$Front = Join-Path $Root "front"
+$Front = Join-Path $Root "frontend\frontoffice"
 
 if (Get-Command npx -ErrorAction SilentlyContinue) {
     npx --yes http-server $Front -p 5500 -c-1
