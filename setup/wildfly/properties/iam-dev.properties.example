@@ -1,0 +1,6 @@
+# IAM virtual host (same script as the API): iam-1.0.war is served at the root of iam.greenpilot.local.
+api.name=iam
+api.version=1.0
+api.aliases=iam.greenpilot.local
+api.context=greenpilot
+api.domains=greenpilot.local

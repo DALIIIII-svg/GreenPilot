@@ -1,0 +1,13 @@
+# HTTPS listener with a PKCS#12 certificate (development: tools/certs/wildfly.p12 from setup/make-certs.ps1).
+set keystorePath=`:resolve-expression(expression=${tls.keystore})`
+set keystorePassword=`:resolve-expression(expression=${tls.password})`
+if (outcome != success) of /subsystem=elytron/key-store=greenpilot-ks:read-resource
+    /subsystem=elytron/key-store=greenpilot-ks:add(path=$keystorePath,type=PKCS12,credential-reference={clear-text=$keystorePassword})
+    /subsystem=elytron/key-manager=greenpilot-km:add(key-store=greenpilot-ks,credential-reference={clear-text=$keystorePassword})
+    /subsystem=elytron/server-ssl-context=greenpilot-ssc:add(key-manager=greenpilot-km,protocols=["TLSv1.3","TLSv1.2"])
+else
+    /subsystem=elytron/key-store=greenpilot-ks:write-attribute(name=path,value=$keystorePath)
+    /subsystem=elytron/key-store=greenpilot-ks:write-attribute(name=credential-reference,value={clear-text=$keystorePassword})
+    /subsystem=elytron/key-manager=greenpilot-km:write-attribute(name=credential-reference,value={clear-text=$keystorePassword})
+end-if
+/subsystem=undertow/server=default-server/https-listener=https:write-attribute(name=ssl-context,value=greenpilot-ssc)

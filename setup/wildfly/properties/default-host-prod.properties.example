@@ -1,3 +1,4 @@
-# Front Office root and IAM hostname. Provision these directories on the WildFly host.
+# Front Office on the default host. The pipeline publishes frontend/frontoffice to default.path.
 default.path=/var/opt/wildfly/www/frontoffice
-default.aliases=user.your-domain.tld,iam.your-domain.tld
+default.aliases=user.your-domain.tld
+default.domains=your-domain.tld

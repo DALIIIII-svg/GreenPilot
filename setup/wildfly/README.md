@@ -1,59 +1,45 @@
-# WildFly hosting for GreenPilot PWAs
+# WildFly hosting for GreenPilot
 
-GreenPilot's Front Office and Back Office are static PWAs. The Undertow configuration in this folder serves them from WildFly so a deployment pipeline can publish the frontend files to the server and set virtual-host paths per environment.
+The course's CI/CD scripts configure WildFly so that it serves the whole application, one Undertow virtual host per part:
 
-## Host mapping
+| Script | Properties | Result |
+|---|---|---|
+| `default-host.cli` | `default-host-<env>.properties` | Front Office on the default host (`user.<domain>`); defines the shared filters; reloads |
+| `add-host.cli` | `admin-host-<env>.properties` | Back Office on `admin-host` (`admin.<domain>`) |
+| `add-api.cli` | `api-<env>.properties` | `api-1.0.war` at the root of `api-host` (`api.<domain>`) |
+| `add-api.cli` | `iam-<env>.properties` | `iam-1.0.war` at the root of `iam-host` (`iam.<domain>`) |
+| `https.cli` | `https-<env>.properties` | HTTPS listener with the PKCS#12 certificate |
+| `reset-hosts.cli` | - | removes what the scripts above added, so they can be applied again |
 
-| Host | WildFly behavior |
-|---|---|
-| `user.<domain>` | Default host serves `frontend/frontoffice/` at `/`. |
-| `iam.greenpilot.local` | Alias of the default host; the existing `/iam` WAR remains available. |
-| `admin.<domain>` | Dedicated Undertow file handler serves `frontend/backoffice/` at `/`. |
-| `api.<domain>` | Dedicated virtual host routes to the deployed `greenpilot.war`; API paths remain `/greenpilot/api` and `/greenpilot/ws`. |
-| `iam.<domain>` | Alias of the default host; the existing `/iam` WAR remains available. |
+`add-api.cli` serves `${api.name}-${api.version}.war`, so the Maven `finalName` of the two WARs is `api-1.0` and `iam-1.0`.
 
-The host scripts use separate property files. The tracked `*.properties.example` files are templates; actual environment files ending in `.properties` are git-ignored. The WildFly service account must be able to read both static directories.
+Every host gets the same filters: HSTS on port 443, HTTP to HTTPS redirection on port 80, the SPA router (a 404 returns
+`index.html`, front-ends only), `Cache-Control: private,no-cache`, `X-Content-Type-Options: nosniff`, and the CORS headers, sent
+only when the `Origin` is an `https://` origin of `*.domains`. The rule does not accept an explicit port, so WildFly listens
+on the standard ports 80 and 443, in development too (`setup/run-wildfly.ps1`).
 
-## Windows development setup
-
-From the repository root, copy the dev templates and replace `C:/path/to/GreenPilot` with the absolute checkout path:
-
-```powershell
-Copy-Item .\setup\wildfly\properties\default-host-dev.properties.example .\setup\wildfly\properties\default-host-dev.properties
-Copy-Item .\setup\wildfly\properties\admin-host-dev.properties.example .\setup\wildfly\properties\admin-host-dev.properties
-Copy-Item .\setup\wildfly\properties\api-dev.properties.example .\setup\wildfly\properties\api-dev.properties
-```
-
-Add `setup/hosts.example` entries to the Windows hosts file. Start WildFly, deploy the IAM and API WARs with `setup/build.ps1`, then run:
+## Development (Windows)
 
 ```powershell
+powershell -ExecutionPolicy Bypass -File .\setup\make-certs.ps1 -Force     # once: CA + tools/certs/wildfly.p12 + jvm-truststore.p12
+powershell -ExecutionPolicy Bypass -File .\setup\trust-dev-ca.ps1          # once: Windows trusts the CA
 powershell -ExecutionPolicy Bypass -File .\setup\configure-wildfly-hosts.ps1
 ```
 
-Open `http://user.greenpilot.local:8080/` or `http://localhost:8080/` for the Front Office and `http://admin.greenpilot.local:8080/` for the Back Office. `setup/serve-front.ps1` and `setup/serve-backoffice.ps1` remain optional static development servers on ports 5500/5501; use them only when intentionally working outside the WildFly-hosted workflow.
+`configure-wildfly-hosts.ps1` writes the `*-dev.properties` files from their `.example` with the path of the checkout,
+keeps a copy of the original `standalone.xml` (`standalone.xml.before-hosts`), then runs, against the running server:
+`reset-hosts.cli`, `https.cli`, `default-host.cli`, `add-host.cli`, `add-api.cli` (api), `add-api.cli` (iam), and a reload.
 
-## CI/CD and remote environments
+## Other environments (CI/CD)
 
-For each target environment, create real property files from the corresponding `*-prod.properties.example` templates and set paths and DNS aliases for that environment. The pipeline must publish the static files to those paths before applying the host scripts. For example, with WildFly's remote management HTTPS interface enabled and protected:
+Create the `*-prod.properties` files from their `.example` (paths, domain, certificate), publish `frontend/frontoffice` and
+`frontend/backoffice` to the configured paths, deploy the two WARs, then either run
+`configure-wildfly-hosts.ps1 -Environment prod -Controller remote+https://your-wildfly-host:9993`, or each script directly:
 
 ```sh
-$JBOSS_HOME/bin/jboss-cli.sh --connect --controller=remote+https://your-wildfly-host:9993 \
-  --file=setup/wildfly/add-api.cli \
-  --properties=setup/wildfly/properties/api-prod.properties
-$JBOSS_HOME/bin/jboss-cli.sh --connect --controller=remote+https://your-wildfly-host:9993 \
-  --file=setup/wildfly/add-host.cli \
-  --properties=setup/wildfly/properties/admin-host-prod.properties
-$JBOSS_HOME/bin/jboss-cli.sh --connect --controller=remote+https://your-wildfly-host:9993 \
-  --file=setup/wildfly/default-host.cli \
-  --properties=setup/wildfly/properties/default-host-prod.properties
+$JBOSS_HOME/bin/jboss-cli.sh --connect --controller=remote+https://your-wildfly-host:9993 --timeout=120000 \
+  --file=setup/wildfly/default-host.cli --properties=setup/wildfly/properties/default-host-prod.properties
 ```
 
-The default-host script reloads WildFly after all host resources are updated. Supply management credentials through the deployment environment or the CLI's secured credential configuration; do not commit credentials or real `.properties` files.
-
-`api.deployment` must match the runtime deployment name. This project currently packages the API as `greenpilot.war` and the IAM as `iam.war`. The API host script points to the former; IAM stays on the default host alias at `/iam`. Both frontend config files map `user.<domain>` and `admin.<domain>` to sibling `api.<domain>` and `iam.<domain>` hosts, preserving HTTPS and any explicit port.
-
-## CORS, OAuth and HTTPS
-
-The scripts intentionally do not inject wildcard CORS response headers. The Jakarta applications enforce CORS with `gp.cors.origin`; set `GP_CORS_ORIGIN` in each environment to the exact Front Office and Back Office origins. The IAM's `gp.iam.pwa.redirect-uris` must also contain the exact `https://<frontend-host>/callback.html` URLs. For production, configure `GP_JWT_ISSUER` consistently in IAM and API, and set `GP_IAM_JWKS_URL` in the API to the matching IAM `/jwks` endpoint. The local defaults include the WildFly-hosted origins on port 8080.
-
-The attached examples referenced HSTS and HTTP-to-HTTPS filters by name, but a stock WildFly configuration does not necessarily define those filters. Configure a valid HTTPS listener or TLS-terminating ingress and its HTTP redirect/HSTS policy for production before advertising HTTPS URLs. Do not reuse development HTTP origins in production CORS or redirect allowlists.
+Real `.properties` files are not committed (`.gitignore`). Set `GP_JWT_ISSUER` (IAM and API), `GP_IAM_JWKS_URL` (API) and
+`GP_IAM_PWA_REDIRECT_URIS` (IAM) for the production domain.

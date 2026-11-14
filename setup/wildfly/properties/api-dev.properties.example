@@ -1,6 +1,6 @@
-# Copy to api-dev.properties. The WAR name must match middleware/api/pom.xml.
+# API virtual host: api-1.0.war is served at the root of api.greenpilot.local.
 api.name=api
 api.version=1.0
-api.deployment=greenpilot.war
 api.aliases=api.greenpilot.local
 api.context=greenpilot
+api.domains=greenpilot.local

@@ -1,3 +1,4 @@
-# Copy to default-host-dev.properties and replace the checkout path if needed.
-default.path=C:/path/to/GreenPilot/frontend/frontoffice
-default.aliases=localhost,user.greenpilot.local,iam.greenpilot.local
+# Front Office on the default host. configure-wildfly-hosts.ps1 writes default-host-dev.properties with the path of this checkout.
+default.path=C:/path/to/cot-real/frontend/frontoffice
+default.aliases=user.greenpilot.local
+default.domains=greenpilot.local

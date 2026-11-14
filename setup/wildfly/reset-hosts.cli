@@ -1,0 +1,86 @@
+# Removes what the host scripts add, so that configure-wildfly-hosts.ps1 can apply them again
+# (the other scripts only add resources and fail if they already exist).
+if (outcome == success) of /subsystem=undertow/server=default-server/host=admin-host:read-resource
+    /subsystem=undertow/server=default-server/host=admin-host:remove
+end-if
+if (outcome == success) of /subsystem=undertow/server=default-server/host=api-host:read-resource
+    /subsystem=undertow/server=default-server/host=api-host:remove
+end-if
+if (outcome == success) of /subsystem=undertow/server=default-server/host=iam-host:read-resource
+    /subsystem=undertow/server=default-server/host=iam-host:remove
+end-if
+if (outcome == success) of /subsystem=undertow/server=default-server/host=default-host/filter-ref=hsts-header:read-resource
+    /subsystem=undertow/server=default-server/host=default-host/filter-ref=hsts-header:remove
+end-if
+if (outcome == success) of /subsystem=undertow/server=default-server/host=default-host/filter-ref=http-to-https:read-resource
+    /subsystem=undertow/server=default-server/host=default-host/filter-ref=http-to-https:remove
+end-if
+if (outcome == success) of /subsystem=undertow/server=default-server/host=default-host/filter-ref=spa-default-router:read-resource
+    /subsystem=undertow/server=default-server/host=default-host/filter-ref=spa-default-router:remove
+end-if
+if (outcome == success) of /subsystem=undertow/server=default-server/host=default-host/filter-ref=cache-control:read-resource
+    /subsystem=undertow/server=default-server/host=default-host/filter-ref=cache-control:remove
+end-if
+if (outcome == success) of /subsystem=undertow/server=default-server/host=default-host/filter-ref=content-type-options:read-resource
+    /subsystem=undertow/server=default-server/host=default-host/filter-ref=content-type-options:remove
+end-if
+if (outcome == success) of /subsystem=undertow/server=default-server/host=default-host/filter-ref="Access-Control-Allow-Origin":read-resource
+    /subsystem=undertow/server=default-server/host=default-host/filter-ref="Access-Control-Allow-Origin":remove
+end-if
+if (outcome == success) of /subsystem=undertow/server=default-server/host=default-host/filter-ref="Access-Control-Allow-Methods":read-resource
+    /subsystem=undertow/server=default-server/host=default-host/filter-ref="Access-Control-Allow-Methods":remove
+end-if
+if (outcome == success) of /subsystem=undertow/server=default-server/host=default-host/filter-ref="Access-Control-Allow-Headers":read-resource
+    /subsystem=undertow/server=default-server/host=default-host/filter-ref="Access-Control-Allow-Headers":remove
+end-if
+if (outcome == success) of /subsystem=undertow/server=default-server/host=default-host/filter-ref="Access-Control-Expose-Headers":read-resource
+    /subsystem=undertow/server=default-server/host=default-host/filter-ref="Access-Control-Expose-Headers":remove
+end-if
+if (outcome == success) of /subsystem=undertow/server=default-server/host=default-host/filter-ref="Access-Control-Allow-Credentials":read-resource
+    /subsystem=undertow/server=default-server/host=default-host/filter-ref="Access-Control-Allow-Credentials":remove
+end-if
+if (outcome == success) of /subsystem=undertow/server=default-server/host=default-host/filter-ref="Access-Control-Max-Age":read-resource
+    /subsystem=undertow/server=default-server/host=default-host/filter-ref="Access-Control-Max-Age":remove
+end-if
+if (outcome == success) of /subsystem=undertow/configuration=filter/response-header=hsts-header:read-resource
+    /subsystem=undertow/configuration=filter/response-header=hsts-header:remove
+end-if
+if (outcome == success) of /subsystem=undertow/configuration=filter/rewrite=http-to-https:read-resource
+    /subsystem=undertow/configuration=filter/rewrite=http-to-https:remove
+end-if
+if (outcome == success) of /subsystem=undertow/configuration=filter/error-page=spa-default-router:read-resource
+    /subsystem=undertow/configuration=filter/error-page=spa-default-router:remove
+end-if
+if (outcome == success) of /subsystem=undertow/configuration=filter/error-page=spa-admin-router:read-resource
+    /subsystem=undertow/configuration=filter/error-page=spa-admin-router:remove
+end-if
+if (outcome == success) of /subsystem=undertow/configuration=filter/response-header=cache-control:read-resource
+    /subsystem=undertow/configuration=filter/response-header=cache-control:remove
+end-if
+if (outcome == success) of /subsystem=undertow/configuration=filter/response-header=content-type-options:read-resource
+    /subsystem=undertow/configuration=filter/response-header=content-type-options:remove
+end-if
+if (outcome == success) of /subsystem=undertow/configuration=filter/response-header="Access-Control-Allow-Origin":read-resource
+    /subsystem=undertow/configuration=filter/response-header="Access-Control-Allow-Origin":remove
+end-if
+if (outcome == success) of /subsystem=undertow/configuration=filter/response-header="Access-Control-Allow-Methods":read-resource
+    /subsystem=undertow/configuration=filter/response-header="Access-Control-Allow-Methods":remove
+end-if
+if (outcome == success) of /subsystem=undertow/configuration=filter/response-header="Access-Control-Allow-Headers":read-resource
+    /subsystem=undertow/configuration=filter/response-header="Access-Control-Allow-Headers":remove
+end-if
+if (outcome == success) of /subsystem=undertow/configuration=filter/response-header="Access-Control-Expose-Headers":read-resource
+    /subsystem=undertow/configuration=filter/response-header="Access-Control-Expose-Headers":remove
+end-if
+if (outcome == success) of /subsystem=undertow/configuration=filter/response-header="Access-Control-Allow-Credentials":read-resource
+    /subsystem=undertow/configuration=filter/response-header="Access-Control-Allow-Credentials":remove
+end-if
+if (outcome == success) of /subsystem=undertow/configuration=filter/response-header="Access-Control-Max-Age":read-resource
+    /subsystem=undertow/configuration=filter/response-header="Access-Control-Max-Age":remove
+end-if
+if (outcome == success) of /subsystem=undertow/configuration=handler/file=admin-content:read-resource
+    /subsystem=undertow/configuration=handler/file=admin-content:remove
+end-if
+/subsystem=undertow/server=default-server/host=default-host:write-attribute(name=alias,value=[localhost])
+/subsystem=undertow/configuration=handler/file=welcome-content:write-attribute(name=path,value="${jboss.home.dir}/welcome-content")
+reload
