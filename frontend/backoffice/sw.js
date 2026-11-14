@@ -1,4 +1,4 @@
-const CACHE = 'greenpilot-backoffice-v3';
+const CACHE = 'greenpilot-backoffice-v4';
 const SHELL = [
   './',
   'index.html',
@@ -38,7 +38,6 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (event.request.method !== 'GET' || url.origin !== location.origin) return;
-  if (url.pathname.startsWith('/greenpilot/') || url.pathname.startsWith('/iam/')) return;
 
   event.respondWith(
     fetch(event.request)

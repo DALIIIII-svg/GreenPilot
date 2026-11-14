@@ -6,10 +6,11 @@ Cloud of Things project (SUP'COM): connected greenhouse, bounded irrigation, vis
 GreenPilot/
 ├── middleware/                  Maven multi-module build
 │   ├── core/                    shared jar: NosqlEntity, UUIDv7, ETag, EdDSA JWT verification, @Secured, error mappers
-│   ├── iam/   -> iam.war        OAuth 2.0 authorization server (Authorization Code + PKCE), /iam
-│   └── api/   -> greenpilot.war REST + WebSocket + MQTT v5 middleware, /greenpilot
+│   ├── iam/   -> iam-1.0.war    OAuth 2.0 authorization server (Authorization Code + PKCE), https://iam.<domain>/
+│   └── api/   -> api-1.0.war    REST + WebSocket + MQTT v5 middleware, https://api.<domain>/
 ├── frontend/                    Front Office and Back Office PWAs (plain HTML/CSS/JavaScript)
-├── setup/                       Windows scripts: install, certificates, MQTT ACL, build, run
+├── iot/                         edge side: ESP32 firmware (Wokwi), Node-RED gateway, field node simulator
+├── setup/                       Windows scripts: install, certificates, MQTT ACL, build, run, WildFly hosts (wildfly/)
 ├── samples/                     test data + end-to-end test (simulates the Pi and the PWA)
 └── tools/                       JDK 25, Maven, WildFly 41, certificates, broker config (generated, not in git)
 ```
@@ -19,48 +20,58 @@ Each module follows **Boundary – Control – Entity**: `boundaries` (REST/WebS
 
 ## Quick start (PowerShell, from the repository root)
 
+WildFly serves everything, one virtual host per part, over HTTPS on the standard ports (80 redirects to 443):
+
+| Host | Served by WildFly | URL |
+|---|---|---|
+| `user.greenpilot.local` | Front Office (default host, `frontend/frontoffice`) | <https://user.greenpilot.local> |
+| `admin.greenpilot.local` | Back Office (`frontend/backoffice`) | <https://admin.greenpilot.local> |
+| `api.greenpilot.local` | `api-1.0.war`: REST `/api`, WebSocket `/ws` | <https://api.greenpilot.local/api/health> |
+| `iam.greenpilot.local` | `iam-1.0.war`: `/authorize`, `/token`, `/jwks`, `/identities` | <https://iam.greenpilot.local/jwks> |
+
+Once, in this order:
+
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\setup\setup-windows.ps1     # once
+powershell -ExecutionPolicy Bypass -File .\setup\setup-windows.ps1      # JDK, Maven, WildFly, MongoDB, Mosquitto
+powershell -ExecutionPolicy Bypass -File .\setup\make-certs.ps1 -Force  # CA, broker certificate, WildFly HTTPS certificate
+powershell -ExecutionPolicy Bypass -File .\setup\make-mqtt-auth.ps1     # broker users, ACL, configuration
+powershell -ExecutionPolicy Bypass -File .\setup\trust-dev-ca.ps1       # Windows (Chrome, Edge) trusts the development CA
+```
+
+Add the four names of [`setup/hosts.example`](setup/hosts.example) to `C:\Windows\System32\drivers\etc\hosts` (administrator).
+Ports 80 and 443 must be free (`netstat -ano | findstr ":443 "`).
+
+Each session:
+
+```powershell
 powershell -ExecutionPolicy Bypass -File .\setup\start-mosquitto.ps1   # window 1
 powershell -ExecutionPolicy Bypass -File .\setup\run-wildfly.ps1       # window 2 (MongoDB must be running)
-powershell -ExecutionPolicy Bypass -File .\setup\build.ps1             # window 3: build and deploy the WARs
+powershell -ExecutionPolicy Bypass -File .\setup\build.ps1             # window 3: build and deploy the WARs (after code changes)
+powershell -ExecutionPolicy Bypass -File .\setup\configure-wildfly-hosts.ps1   # window 3: once, or after changing setup/wildfly
 powershell -ExecutionPolicy Bypass -File .\samples\test-flow.ps1       # optional: sample site, readings and an incident
+powershell -ExecutionPolicy Bypass -File .\setup\start-gateway.ps1     # window 4: Node-RED gateway (plays the Raspberry Pi)
+powershell -ExecutionPolicy Bypass -File .\setup\start-esp32-sim.ps1   # window 5: simulated ESP32 (or Wokwi, see iot/README.md)
 ```
 
-On first use, copy and edit the WildFly dev properties, then add the host mappings from `setup/hosts.example` to the Windows hosts file. After WildFly has started and `build.ps1` has deployed both WARs, run:
+Open <https://admin.greenpilot.local> with the development administrator `admin@greenpilot.local` / `admin123`,
+create a grower account with access to a greenhouse, and use it on <https://user.greenpilot.local>.
+A minimal test page is served by the API at <https://api.greenpilot.local/live-demo.html>.
 
-```powershell
-Copy-Item .\setup\wildfly\properties\default-host-dev.properties.example .\setup\wildfly\properties\default-host-dev.properties
-Copy-Item .\setup\wildfly\properties\admin-host-dev.properties.example .\setup\wildfly\properties\admin-host-dev.properties
-Copy-Item .\setup\wildfly\properties\api-dev.properties.example .\setup\wildfly\properties\api-dev.properties
-# Edit default-host-dev.properties and admin-host-dev.properties with the absolute frontend paths.
-powershell -ExecutionPolicy Bypass -File .\setup\configure-wildfly-hosts.ps1
-```
+## Edge side (simulated hardware)
 
-Open <http://user.greenpilot.local:8080> for the Front Office or <http://admin.greenpilot.local:8080> for the Back Office. Use a grower account in the Front Office; the development administrator is `admin@greenpilot.local` / `admin123` for the Back Office.
+Until the greenhouse hardware is available, the ESP32 field node runs in the Wokwi simulator (or `iot/simulator`) and Node-RED plays the Raspberry Pi gateway between the ESP32 and the MQTT broker. Details, messages and the gateway's W3C WoT API are in [`iot/README.md`](iot/README.md).
 
-A minimal test page is also served by WildFly at <http://localhost:8080/greenpilot/live-demo.html>.
+## WildFly hosting (CI/CD)
 
-## Local domain setup
-
-For local development, the project can use these names:
-
-| Name | Responsibility | URL |
-|---|---|---|
-| `user.greenpilot.local` | Grower interface served by WildFly | `http://user.greenpilot.local:8080` |
-| `admin.greenpilot.local` | Administrator interface served by WildFly | `http://admin.greenpilot.local:8080` |
-| `iam.greenpilot.local` | OAuth IAM | `http://iam.greenpilot.local:8080/iam` |
-| `api.greenpilot.local` | REST API and WebSocket | `http://api.greenpilot.local:8080/greenpilot/api` |
-
-The corresponding hosts entries are in [`setup/hosts.example`](setup/hosts.example). Add them to `C:\Windows\System32\drivers\etc\hosts` with administrator privileges. They map the names to the local computer; Undertow virtual hosts in WildFly distinguish Front Office, Back Office, and API traffic on port 8080. The IAM remains reachable at `/iam` on the default host. The API still enforces role/scope authorization.
-
-The IAM and API configuration files set the shared JWT issuer, JWKS endpoint and allowed browser origins. The WildFly-served Front Office and Back Office origins use port 8080 and are included in the local CORS and OAuth callback lists. The optional `serve-front.ps1` and `serve-backoffice.ps1` scripts still provide separate development servers on ports 5500/5501 for static-file iteration; those URLs are not the WildFly deployment workflow.
-
-WildFly CLI scripts and dev/prod property templates are documented in [`setup/wildfly/README.md`](setup/wildfly/README.md). Production deployments must set environment-specific issuer, JWKS, CORS, and OAuth redirect values on the server.
+The host configuration uses the CLI scripts and per-environment property files of [`setup/wildfly/`](setup/wildfly/README.md):
+`default-host.cli` (Front Office), `add-host.cli` (Back Office), `add-api.cli` (API and IAM, each WAR at the root of its host),
+plus `https.cli` (certificate) and `reset-hosts.cli` (so the configuration can be applied again). They also add HSTS,
+HTTP to HTTPS redirection, the SPA router, `Cache-Control`, `X-Content-Type-Options` and the CORS headers, which are sent only to
+`https://` origins of the configured domain. The applications therefore no longer add CORS headers themselves.
 
 ## Front-end (PWA)
 
-`frontend/frontoffice/` and `frontend/backoffice/` are independent single-page apps written in plain HTML, CSS and JavaScript modules. In the standard deployment, Undertow serves them from WildFly's file handler on virtual hosts. The separate ports 5500/5501 are development-only alternatives.
+`frontend/frontoffice/` and `frontend/backoffice/` are independent single-page apps written in plain HTML, CSS and JavaScript modules. WildFly serves them from file handlers on the `user` and `admin` virtual hosts; both call the API and the IAM on their sibling hosts `api.<domain>` and `iam.<domain>`.
 
 | Page | Who | What |
 |---|---|---|
@@ -93,13 +104,13 @@ never cached by the service worker. The live updates come from the WebSocket bel
 | Layer | Mechanism |
 |---|---|
 | Users | IAM: OAuth 2.0 Authorization Code + PKCE (S256), public PWA client, exact redirect URIs, `state` |
-| Tokens | 15-min JWT signed **EdDSA/Ed25519**; API verifies with the IAM public keys (`/iam/jwks`), checks `iss`, `aud`, `exp`, `alg` |
+| Tokens | 15-min JWT signed **EdDSA/Ed25519**; API verifies with the IAM public keys (`https://iam.<domain>/jwks`), checks `iss`, `aud`, `exp`, `alg` |
 | Authorization | roles (`groups`: GROWER/ADMIN) + scopes (`greenhouse:read`, `greenhouse:control`, `incidents:manage`, `admin`) + per-user site list |
 | Refresh | opaque, stored hashed, rotated on every use |
 | MQTT | TLS 1.3 only (port 8883), no anonymous, one user per gateway, ACL: a gateway only writes `greenpilot/<itself>/up/#` |
 | Concurrency | `version` + ETag: `If-None-Match` → 304, `If-Match` → 412, atomic version claim in MongoDB |
 
-## REST API (`http://localhost:8080/greenpilot/api`, Bearer token)
+## REST API (`https://api.greenpilot.local/api`, Bearer token)
 | Method | Path | Needs |
 |---|---|---|
 | GET | /health | public |
@@ -117,9 +128,9 @@ never cached by the service worker. The live updates come from the WebSocket bel
 | PUT | /users/{subject}/sites | admin |
 | GET | /audit | admin |
 
-IAM (`http://localhost:8080/iam`): `GET /authorize`, `POST /token`, `GET /jwks`, `GET/POST/PUT /identities` (admin).
+IAM (`https://iam.greenpilot.local`): `GET /authorize`, `POST /token`, `GET /jwks`, `GET/POST/PUT /identities` (admin).
 
-WebSocket `ws://localhost:8080/greenpilot/ws`: send `{"type":"auth","token":"…"}` first, then receive
+WebSocket `wss://api.greenpilot.local/ws`: send `{"type":"auth","token":"…"}` first, then receive
 `{"siteId","type":"telemetry|forecast|inspection|command|incident.opened|incident.updated","data":{…}}`.
 
 ## MQTT v5 contract (TLS, QoS 1, never retained, `{gw}` = gatewayId = MQTT username)
@@ -137,7 +148,7 @@ WebSocket `ws://localhost:8080/greenpilot/ws`: send `{"type":"auth","token":"…
 Messages are validated (JSON-B + Bean Validation); ids are deterministic so a re-sent buffer creates no duplicates.
 
 ## Known limitations / next steps
-- Dev only: self-signed CA, signing key stored in MongoDB, default passwords in `setup/env.ps1`.
+- Dev only: signing key stored in MongoDB, default passwords in `setup/env.ps1`.
 - `Instant` fields are stored by JNoSQL as ISO-8601 text (sortable); two values inside the same second may sort slightly off.
-- The PWA and the API run on two origins (5500 and 8080) in development; in production, Nginx with HTTPS should serve both on one origin.
+- Development HTTPS uses a self-signed CA (`setup/make-certs.ps1`); production needs a real certificate in `https-prod.properties`.
 - Automated tests (JUnit + Testcontainers) and CI.

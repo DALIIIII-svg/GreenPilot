@@ -11,10 +11,10 @@ $ErrorActionPreference = "Stop"
 . "$PSScriptRoot\..\setup\env.ps1"
 Add-Type -AssemblyName System.Net.Http
 
-$Iam = "http://localhost:8080/iam"
-$Api = "http://localhost:8080/greenpilot/api"
+$Iam = "https://iam.greenpilot.local"
+$Api = "https://api.greenpilot.local/api"
 $ClientId = "greenpilot-pwa"
-$Redirect = "http://localhost:8080/greenpilot/live-demo.html"
+$Redirect = "https://api.greenpilot.local/live-demo.html"
 $Pub = "C:\Program Files\mosquitto\mosquitto_pub.exe"
 $Here = $PSScriptRoot
 $Gw = $MqttGatewayUser
@@ -190,4 +190,4 @@ Write-Host "  no token -> 401:"; Call GET "$Api/sites" | Out-Null
 
 Step "14. Audit log (last 5)"
 Show ((Call GET "$Api/audit?limit=5" $null $T).Body | Select-Object ts, action, username)
-Write-Host "`nAll steps executed. Open http://localhost:8080/greenpilot/live-demo.html for the WebSocket live view." -ForegroundColor Green
+Write-Host "`nAll steps executed. Open https://api.greenpilot.local/live-demo.html for the WebSocket live view." -ForegroundColor Green

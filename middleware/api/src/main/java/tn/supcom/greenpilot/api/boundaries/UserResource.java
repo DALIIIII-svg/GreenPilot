@@ -39,7 +39,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Site access of users. Accounts themselves live in the IAM (/iam/identities);
+ * Site access of users. Accounts themselves live in the IAM (iam host, /identities);
  * here the administrator decides WHICH greenhouses each account (IAM subject) may see.
  */
 @Path("/users")

@@ -28,7 +28,7 @@
   </dependencies>
 
   <build>
-    <finalName>iam</finalName>
+    <finalName>iam-1.0</finalName>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

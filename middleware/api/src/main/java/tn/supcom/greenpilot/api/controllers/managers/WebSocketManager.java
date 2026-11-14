@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 /**
- * Live push to the PWAs (replaces 10 s polling). Protocol on ws(s)://host/greenpilot/ws :
+ * Live push to the PWAs (replaces 10 s polling). Protocol on wss://api.<domain>/ws :
  *   client -> {"type":"auth","token":"<access token>"}   (browsers cannot set headers on a WebSocket,
  *                                                         and a token in the URL would end up in logs)
  *   server -> {"type":"auth_ok"}, then {"siteId","type","data"} for every event of an accessible site.

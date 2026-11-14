@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GreenPilot live demo</title>
-<!-- Development test page served by greenpilot.war: OAuth 2.0 + PKCE login, REST calls, WebSocket push.
+<!-- Development test page served by api-1.0.war (https://api.greenpilot.local/live-demo.html): OAuth 2.0 + PKCE login, REST calls, WebSocket push.
      The real PWA (later) will reuse exactly this logic. -->
 <style>
   :root { --bg:#f4f6f3; --card:#fff; --ink:#1d2a20; --muted:#5b6b5f; --accent:#2f6f3e; --warn:#b3261e; --line:#dfe5df; }
@@ -38,7 +38,7 @@
   <section><h2>Live events (WebSocket)</h2><pre id="log"></pre></section>
 </main>
 <script>
-const IAM = '/iam', API = '/greenpilot/api', SITE = 'greenhouse-01';
+const IAM = location.origin.replace('//api.', '//iam.'), API = '/api', SITE = 'greenhouse-01';
 const CLIENT_ID = 'greenpilot-pwa', REDIRECT = location.origin + location.pathname;
 const SCOPE = 'greenhouse:read greenhouse:control incidents:manage admin';
 let token = null, refresh = null;
@@ -116,7 +116,7 @@ async function loadIncidents() {
 
 // ---- WebSocket push: authenticate with the first message (no token in the URL)
 function connect() {
-  const ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/greenpilot/ws');
+  const ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws');
   ws.onopen = () => ws.send(JSON.stringify({ type: 'auth', token }));
   ws.onmessage = e => {
     const m = JSON.parse(e.data);
