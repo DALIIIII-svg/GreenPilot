@@ -1,0 +1,14 @@
+{
+  "name": "greenpilot-iot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GreenPilot edge side: Node-RED gateway (plays the Raspberry Pi) and an ESP32 field node simulator",
+  "scripts": {
+    "gateway": "node-red --userDir gateway",
+    "simulator": "node simulator/esp32-sim.js"
+  },
+  "dependencies": {
+    "node-red": "^4.1.17",
+    "ws": "^8.18.0"
+  }
+}
