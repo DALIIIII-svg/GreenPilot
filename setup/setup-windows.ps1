@@ -63,6 +63,6 @@ Write-Host "[6/6] TLS certificates + MQTT users and ACL"
 Write-Host ""
 Write-Host "Done. Next (each in its own PowerShell window):" -ForegroundColor Green
 Write-Host "  .\setup\start-mosquitto.ps1     MQTT broker on mqtts://localhost:8883"
-Write-Host "  .\setup\run-wildfly.ps1         application server on http://localhost:8080"
-Write-Host "  .\setup\build.ps1               compile core+iam+api and deploy iam.war + greenpilot.war"
+Write-Host "  .\setup\run-wildfly.ps1         application server (HTTP 80, HTTPS 443)"
+Write-Host "  .\setup\build.ps1               compile core+iam+api and deploy iam-1.0.war + api-1.0.war"
 Write-Host "  .\samples\test-flow.ps1         end-to-end test (OAuth PKCE login, MQTT v5, ETag...)"

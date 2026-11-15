@@ -31,3 +31,12 @@ archive/
 *.tmp
 .DS_Store
 Thumbs.db
+
+# IoT gateway runtime files and PlatformIO build output
+/iot/gateway/flows_cred.json
+/iot/gateway/context/
+/iot/gateway/.config.*.json
+/iot/gateway/.config.*.backup
+/iot/gateway/.flows*.backup
+/iot/gateway/lib/
+/iot/esp32-node/.pio/

@@ -9,7 +9,7 @@ import jakarta.websocket.Session;
 import jakarta.websocket.server.ServerEndpoint;
 import tn.supcom.greenpilot.api.controllers.managers.WebSocketManager;
 
-/** WebSocket boundary: ws://localhost:8080/greenpilot/ws - all the logic is in WebSocketManager. */
+/** WebSocket boundary: wss://api.greenpilot.local/ws - all the logic is in WebSocketManager. */
 @ServerEndpoint("/ws")
 public class PushEndpoint {
 

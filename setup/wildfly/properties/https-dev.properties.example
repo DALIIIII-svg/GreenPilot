@@ -1,0 +1,3 @@
+# HTTPS listener with the development certificate made by setup/make-certs.ps1.
+tls.keystore=C:/path/to/cot-real/tools/certs/wildfly.p12
+tls.password=changeit

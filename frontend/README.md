@@ -29,7 +29,7 @@ frontend/
 └── README.md
 ```
 
-The `js/` and `js/pages/` layout follows the existing PWA conventions. No component, hook, or utility framework is used by this project, so empty framework-style folders were not added.
+The `js/` and `js/pages/` layout is the same in both apps.
 
 ## 3. Front Office
 
@@ -55,24 +55,25 @@ No frontend dependency installation is required. Install the backend prerequisit
 
 The frontend has no `.env` files: browser environment values are public, and each app's `js/config.js` derives API, IAM, WebSocket and callback origins from the current host. No credentials or signing keys belong in frontend files.
 
-The WildFly-hosted local workflow uses distinct names on the same Undertow listener:
+WildFly serves each part on its own virtual host, over HTTPS on the standard ports:
 
-| URL | Responsibility | Local target |
+| URL | Responsibility | WildFly host |
 |---|---|---|
-| `http://user.greenpilot.local:8080` | Grower Front Office | WildFly Undertow file handler for `frontend/frontoffice/` |
-| `http://admin.greenpilot.local:8080` | Administrator Back Office | WildFly Undertow file handler for `frontend/backoffice/` |
-| `http://iam.greenpilot.local:8080/iam` | OAuth authorization, tokens, identities and JWKS | Existing IAM WAR on WildFly |
-| `http://api.greenpilot.local:8080/greenpilot/api` | GreenPilot REST API | Existing API WAR on WildFly |
+| `https://user.greenpilot.local` | Grower Front Office | default host, file handler for `frontend/frontoffice/` |
+| `https://admin.greenpilot.local` | Administrator Back Office | `admin-host`, file handler for `frontend/backoffice/` |
+| `https://iam.greenpilot.local` | OAuth authorization, tokens, identities and JWKS | `iam-host`, `iam-1.0.war` at the root |
+| `https://api.greenpilot.local/api` | GreenPilot REST API (WebSocket at `/ws`) | `api-host`, `api-1.0.war` at the root |
 
-The example hosts entries are in [`../setup/hosts.example`](../setup/hosts.example). Add them to `C:\Windows\System32\drivers\etc\hosts` from an elevated editor. They map all four names to `127.0.0.1`; WildFly's Undertow virtual hosts distinguish the names on port 8080. IAM stays on the default host alias at `/iam`, and the API deployment is routed through `api-host`.
-
-The Undertow scripts and dev/prod property templates are in [`../setup/wildfly/`](../setup/wildfly/). The API and IAM CORS allowlists are configured with `gp.cors.origin`; OAuth callback URLs are in `gp.iam.pwa.redirect-uris`. Keep those values aligned with the frontend hostnames. In production, configure real DNS and HTTPS and supply the origin/redirect allowlists through server environment configuration.
+`js/config.js` takes the domain from the page's host name (`user.<domain>` or `admin.<domain>`) and calls `api.<domain>` and `iam.<domain>`.
+The four names are in [`../setup/hosts.example`](../setup/hosts.example). The scripts and dev/prod property files are in
+[`../setup/wildfly/`](../setup/wildfly/README.md): WildFly adds the CORS headers for `https://` origins of the domain, and the OAuth
+callbacks are listed in `gp.iam.pwa.redirect-uris` of the IAM. HTTPS is required: sign-in (PKCE) and the service worker only work in a secure context.
 
 ## 8. Running the Applications
 
-Start MongoDB, WildFly and Mosquitto. Deploy the IAM/API WARs, copy the `*-dev.properties.example` files to local `.properties` files, set the two frontend paths, add the host mappings, and run [`setup/configure-wildfly-hosts.ps1`](../setup/configure-wildfly-hosts.ps1). Then open <http://user.greenpilot.local:8080> for growers and <http://admin.greenpilot.local:8080> for administrators. `http://localhost:8080` serves the Front Office too. Use an appropriate account for the selected application.
-
-The `setup/serve-front.ps1` and `setup/serve-backoffice.ps1` scripts remain optional development servers on ports 5500/5501. Restart/redeploy IAM and API after changing their MicroProfile configuration.
+Follow the quick start of the root README (certificates, hosts entries, `build.ps1`, then
+[`setup/configure-wildfly-hosts.ps1`](../setup/configure-wildfly-hosts.ps1)). Then open <https://user.greenpilot.local> for growers and
+<https://admin.greenpilot.local> for administrators. Restart or redeploy IAM and API after changing their MicroProfile configuration.
 
 ## 9. Build and Production
 
@@ -91,8 +92,9 @@ Keep user screens and user-facing navigation in `frontoffice/`; keep administrat
 ## 12. Troubleshooting
 
 - **OAuth reports an unregistered redirect URI:** confirm the exact origin and callback path are present in `gp.iam.pwa.redirect-uris`, then restart/redeploy IAM.
-- **The page loads but API calls fail:** confirm WildFly and MongoDB are running, check the backend URL in `js/config.js`, and verify the backend CORS origin permits the frontend origin.
-- **Live status keeps reconnecting:** check the backend WebSocket endpoint and its origin/security settings.
+- **The page loads but API calls fail:** confirm WildFly and MongoDB are running and that `configure-wildfly-hosts.ps1` was applied (it adds the CORS headers); open the page with `https://` and without a port.
+- **Live status keeps reconnecting:** check that `wss://api.greenpilot.local/ws` is reachable and that the session is still valid.
 - **A stale interface appears offline:** clear the site's service worker/cache or reload while online; Front Office and Back Office use distinct cache names.
 - **The Back Office denies access:** authenticate with an identity carrying both `ADMIN` and the `admin` scope. API authorization remains enforced independently by the server.
-- **No static server is available:** install Node.js or Python, then rerun the matching PowerShell script.
+- **The browser warns about the certificate:** run `setup/trust-dev-ca.ps1` and restart the browser.
+- **Sign-in does nothing:** the page must be opened over HTTPS; PKCE needs Web Crypto, which browsers only offer in a secure context.

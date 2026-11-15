@@ -1,4 +1,5 @@
-# Back Office virtual host. Provision this directory on the WildFly host.
+# Back Office virtual host. The pipeline publishes frontend/backoffice to host.path.
 host.path=/var/opt/wildfly/www/backoffice
 host.aliases=admin.your-domain.tld
 host.key=admin
+host.domains=your-domain.tld

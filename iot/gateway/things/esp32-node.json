@@ -1,0 +1,58 @@
+{
+  "@context": "https://www.w3.org/2022/wot/td/v1.1",
+  "id": "urn:greenpilot:greenhouse-01:esp32-node",
+  "title": "GreenPilot field node",
+  "description": "ESP32 acquisition and irrigation node of greenhouse-01, exposed by its gateway",
+  "securityDefinitions": { "nosec_sc": { "scheme": "nosec" } },
+  "security": "nosec_sc",
+  "properties": {
+    "soilMoistureA": {
+      "title": "Soil moisture, zone A", "type": "number", "unit": "percent", "minimum": 0, "maximum": 100, "readOnly": true,
+      "forms": [ { "href": "things/esp32-node/properties/soilMoistureA", "op": "readproperty", "contentType": "application/json" } ]
+    },
+    "soilMoistureB": {
+      "title": "Soil moisture, zone B", "type": "number", "unit": "percent", "minimum": 0, "maximum": 100, "readOnly": true,
+      "forms": [ { "href": "things/esp32-node/properties/soilMoistureB", "op": "readproperty", "contentType": "application/json" } ]
+    },
+    "airTemperature": {
+      "title": "Air temperature", "type": "number", "unit": "degree Celsius", "readOnly": true,
+      "forms": [ { "href": "things/esp32-node/properties/airTemperature", "op": "readproperty", "contentType": "application/json" } ]
+    },
+    "airHumidity": {
+      "title": "Air relative humidity", "type": "number", "unit": "percent", "minimum": 0, "maximum": 100, "readOnly": true,
+      "forms": [ { "href": "things/esp32-node/properties/airHumidity", "op": "readproperty", "contentType": "application/json" } ]
+    },
+    "waterAvailable": {
+      "title": "Water in the reservoir", "type": "boolean", "readOnly": true,
+      "forms": [ { "href": "things/esp32-node/properties/waterAvailable", "op": "readproperty", "contentType": "application/json" } ]
+    },
+    "pumpState": {
+      "title": "Pump state", "type": "string", "enum": ["ON", "OFF"], "readOnly": true,
+      "forms": [ { "href": "things/esp32-node/properties/pumpState", "op": "readproperty", "contentType": "application/json" } ]
+    }
+  },
+  "actions": {
+    "irrigate": {
+      "title": "Water both zones for a bounded time",
+      "safe": false,
+      "idempotent": false,
+      "input": {
+        "type": "object",
+        "properties": { "durationSec": { "type": "integer", "minimum": 1, "maximum": 30 } },
+        "required": ["durationSec"]
+      },
+      "output": {
+        "type": "object",
+        "properties": { "commandId": { "type": "string" }, "status": { "type": "string" } }
+      },
+      "forms": [ { "href": "things/esp32-node/actions/irrigate", "op": "invokeaction", "contentType": "application/json" } ]
+    }
+  },
+  "events": {
+    "lowWater": {
+      "title": "Reservoir level changed (true = empty)",
+      "data": { "type": "boolean" },
+      "forms": [ { "href": "ws://{host}/ws/things/esp32-node/events/lowWater", "op": "subscribeevent", "subprotocol": "websocket", "contentType": "application/json" } ]
+    }
+  }
+}

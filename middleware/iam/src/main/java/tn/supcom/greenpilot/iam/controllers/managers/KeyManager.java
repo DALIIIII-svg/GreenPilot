@@ -65,7 +65,7 @@ public class KeyManager {
         return publicKeys.get(kid);
     }
 
-    /** JSON Web Key Set (RFC 7517) published at /iam/jwks: lets the API verify tokens without any secret. */
+    /** JSON Web Key Set (RFC 7517) published at /jwks: lets the API verify tokens without any secret. */
     public JsonObject jwks() {
         load();
         JsonArrayBuilder keys = Json.createArrayBuilder();

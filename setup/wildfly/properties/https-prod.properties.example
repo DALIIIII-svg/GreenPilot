@@ -1,0 +1,3 @@
+# HTTPS listener with the server's real certificate (PKCS#12). Keep the password out of git.
+tls.keystore=/etc/wildfly/tls/your-domain.p12
+tls.password=change-me

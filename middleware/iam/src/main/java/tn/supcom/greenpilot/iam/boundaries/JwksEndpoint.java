@@ -8,7 +8,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import tn.supcom.greenpilot.iam.controllers.managers.KeyManager;
 
-/** GET /iam/jwks - public keys used to verify access tokens (RFC 7517). Public, cacheable. */
+/** GET /jwks - public keys used to verify access tokens (RFC 7517). Public, cacheable. */
 @Path("/jwks")
 @RequestScoped
 public class JwksEndpoint {
