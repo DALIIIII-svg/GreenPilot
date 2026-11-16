@@ -33,7 +33,7 @@ ESP32 field node  --WebSocket/JSON-->  Node-RED gateway  --MQTT v5/TLS-->  Mosqu
 | Direction | `type` | Fields |
 |---|---|---|
 | ESP32 -> gateway | `hello` | `deviceId`, `firmware` |
-| ESP32 -> gateway | `telemetry` | `deviceId`, `ts` (epoch ms, 0 if no clock), `pump`, `readings[{type, zoneId, value, unit, quality}]` |
+| ESP32 -> gateway | `telemetry` | `deviceId`, `ts` (epoch ms, 0 if no clock; the gateway stamps the uplink with its own clock), `pump`, `readings[{type, zoneId, value, unit, quality}]` |
 | ESP32 -> gateway | `ack` | `commandId`, `status` (ACCEPTED, REJECTED, COMPLETED, FAILED), `reason` |
 | ESP32 -> gateway | `event` | `name` (`lowWater`), `value` |
 | gateway -> ESP32 | `command` | `commandId`, `action` (IRRIGATE), `durationSec`, `expiresAt` (epoch ms) |
