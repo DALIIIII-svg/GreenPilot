@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  backend:
+    name: Build and test the backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Compile, run the tests, package the WARs
+        run: mvn -B -ntp -f middleware/pom.xml verify
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wars
+          path: |
+            middleware/api/target/api-1.0.war
+            middleware/iam/target/iam-1.0.war
+          retention-days: 7
+
+  edge:
+    name: Check the gateway and the simulator
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Node-RED flows are valid JSON, scripts parse
+        run: |
+          node -e "JSON.parse(require('fs').readFileSync('iot/gateway/flows.json', 'utf8'))"
+          node -e "JSON.parse(require('fs').readFileSync('iot/gateway/things/esp32-node.json', 'utf8'))"
+          node --check iot/gateway/settings.js
+          node --check iot/simulator/esp32-sim.js
+
+      - name: Deployment scripts parse
+        run: for f in deploy/linux/*.sh; do bash -n "$f"; done

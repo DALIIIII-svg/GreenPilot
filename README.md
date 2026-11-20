@@ -11,6 +11,8 @@ GreenPilot/
 ├── frontend/                    Front Office and Back Office PWAs (plain HTML/CSS/JavaScript)
 ├── iot/                         edge side: ESP32 firmware (Wokwi), Node-RED gateway, field node simulator
 ├── setup/                       Windows scripts: install, certificates, MQTT ACL, build, run, WildFly hosts (wildfly/)
+├── deploy/                      Linux server: installation, configuration and deployment scripts (see deploy/README.md)
+├── .github/workflows/           CI (build + tests on every pull request) and Deploy (to the Linux server)
 ├── samples/                     test data + end-to-end test (simulates the Pi and the PWA)
 └── tools/                       JDK 25, Maven, WildFly 41, certificates, broker config (generated, not in git)
 ```
@@ -68,6 +70,15 @@ The host configuration uses the CLI scripts and per-environment property files o
 plus `https.cli` (certificate) and `reset-hosts.cli` (so the configuration can be applied again). They also add HSTS,
 HTTP to HTTPS redirection, the SPA router, `Cache-Control`, `X-Content-Type-Options` and the CORS headers, which are sent only to
 `https://` origins of the configured domain. The applications therefore no longer add CORS headers themselves.
+
+## CI/CD pipeline (GitHub Actions)
+
+- **CI** (`.github/workflows/ci.yml`): on every pull request to `main` and every push to `main`, GitHub compiles the three
+  modules with Java 25, runs the JUnit tests (`mvn verify`), keeps the two WARs as artifacts, and checks the gateway files.
+  Run the same build locally with `mvn -f middleware/pom.xml verify`.
+- **Deploy** (`.github/workflows/deploy.yml`): builds and tests, then copies the release (WARs, front-ends, `setup/wildfly`)
+  to the Linux server over SSH and runs `deploy/linux/deploy.sh`, which applies the WildFly host scripts with the production
+  properties. Started by hand for now; server setup and secrets in [`deploy/README.md`](deploy/README.md).
 
 ## Front-end (PWA)
 
@@ -151,4 +162,4 @@ Messages are validated (JSON-B + Bean Validation); ids are deterministic so a re
 - Dev only: signing key stored in MongoDB, default passwords in `setup/env.ps1`.
 - `Instant` fields are stored by JNoSQL as ISO-8601 text (sortable); two values inside the same second may sort slightly off.
 - Development HTTPS uses a self-signed CA (`setup/make-certs.ps1`); production needs a real certificate in `https-prod.properties`.
-- Automated tests (JUnit + Testcontainers) and CI.
+- Unit tests cover tokens, PKCE, passwords, ids, ETags and MQTT topics; no integration tests against MongoDB/MQTT yet.
