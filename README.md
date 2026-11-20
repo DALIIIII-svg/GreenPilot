@@ -9,7 +9,8 @@ GreenPilot/
 │   ├── iam/   -> iam-1.0.war    OAuth 2.0 authorization server (Authorization Code + PKCE), https://iam.<domain>/
 │   └── api/   -> api-1.0.war    REST + WebSocket + MQTT v5 middleware, https://api.<domain>/
 ├── frontend/                    Front Office and Back Office PWAs (plain HTML/CSS/JavaScript)
-├── iot/                         edge side: ESP32 firmware (Wokwi), Node-RED gateway, field node simulator
+├── iot/                         edge side: ESP32 firmware (Wokwi), Node-RED gateway, simulator, gateway ML services
+├── model/                       machine learning: forecast/ (soil moisture, t + 30 min), vision/ (leaf disease)
 ├── setup/                       Windows scripts: install, certificates, MQTT ACL, build, run, WildFly hosts (wildfly/)
 ├── deploy/                      Linux server: installation, configuration and deployment scripts (see deploy/README.md)
 ├── .github/workflows/           CI (build + tests on every pull request) and Deploy (to the Linux server)
@@ -53,6 +54,7 @@ powershell -ExecutionPolicy Bypass -File .\setup\configure-wildfly-hosts.ps1   #
 powershell -ExecutionPolicy Bypass -File .\samples\test-flow.ps1       # optional: sample site, readings and an incident
 powershell -ExecutionPolicy Bypass -File .\setup\start-gateway.ps1     # window 4: Node-RED gateway (plays the Raspberry Pi)
 powershell -ExecutionPolicy Bypass -File .\setup\start-esp32-sim.ps1   # window 5: simulated ESP32 (or Wokwi, see iot/README.md)
+powershell -ExecutionPolicy Bypass -File .\setup\start-forecast.ps1    # window 6: soil-moisture forecast on the gateway (Python 3)
 ```
 
 Open <https://admin.greenpilot.local> with the development administrator `admin@greenpilot.local` / `admin123`,
@@ -62,6 +64,14 @@ A minimal test page is served by the API at <https://api.greenpilot.local/live-d
 ## Edge side (simulated hardware)
 
 Until the greenhouse hardware is available, the ESP32 field node runs in the Wokwi simulator (or `iot/simulator`) and Node-RED plays the Raspberry Pi gateway between the ESP32 and the MQTT broker. Details, messages and the gateway's W3C WoT API are in [`iot/README.md`](iot/README.md).
+
+## Machine learning
+
+- **Soil-moisture forecast** ([`model/forecast`](model/forecast/README.md)): 30 minutes ahead, per zone, on the gateway.
+  Trained on a public irrigation dataset until our own cycles exist; gradient-boosted trees beat the persistence
+  baseline on held-out cycles (test MAE 0.111 vs 0.159, RMSE 0.781 vs 1.084) and are released; persistence would
+  have been released otherwise. Shown on the dashboard and compared with the measurements in History.
+- **Leaf disease** ([`model/vision`](model/vision/README.md)): YOLO on bell pepper leaves (healthy / bacterial spot).
 
 ## WildFly hosting (CI/CD)
 

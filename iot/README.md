@@ -13,6 +13,7 @@ ESP32 field node  --WebSocket/JSON-->  Node-RED gateway  --MQTT v5/TLS-->  Mosqu
 | `esp32-node/` | ESP32 firmware (PlatformIO, Arduino) + Wokwi circuit (`diagram.json`) |
 | `gateway/` | Node-RED gateway: `flows.json`, `settings.js`, W3C WoT Thing Description of the field node |
 | `simulator/` | `esp32-sim.js`: same protocol as the firmware, controlled from the keyboard |
+| `edge-ml/` | gateway ML services (Python, standard library only): `forecast_service.py` + the installed model releases |
 
 ## Run it
 
@@ -26,7 +27,9 @@ ESP32 field node  --WebSocket/JSON-->  Node-RED gateway  --MQTT v5/TLS-->  Mosqu
      Turn the potentiometers (soil A / B), flip the switch (reservoir), watch the blue LED (pump).
      The firmware reaches the PC through `host.wokwi.internal`.
    - **Simulator**: `powershell -ExecutionPolicy Bypass -File setup\start-esp32-sim.ps1`.
-4. Open the PWA: the readings update, and *Water now* switches the pump on.
+4. Forecast service: `powershell -ExecutionPolicy Bypass -File setup\start-forecast.ps1` (needs Python 3).
+   It collects 20 minutes of readings, then forecasts each zone 30 minutes ahead every minute.
+5. Open the PWA: the readings update, *Water now* switches the pump on, and each soil card shows the forecast.
 
 ## ESP32 <-> gateway messages (JSON text frames)
 
@@ -50,11 +53,29 @@ ESP32 field node  --WebSocket/JSON-->  Node-RED gateway  --MQTT v5/TLS-->  Mosqu
   for the cooldown. Disable with `GW_AUTO_IRRIGATION=false`.
 - The firmware keeps its own protections: pump off at start, bounded duration, stops if the reservoir empties.
 
+## Soil-moisture forecast on the gateway (`edge-ml/`)
+
+```
+Node-RED  --GET /status every 15 s-->  forecast_service.py  --POST /edge/forecast every 60 s-->  Node-RED  --up/forecast-->  cloud
+```
+
+- The service keeps 2 h of readings per zone (`edge-ml/state/forecast-history.json`, so a restart keeps them).
+- Inputs: moisture now and 10 / 20 min ago, air temperature and humidity, minutes since the last watering
+  (from `lastWateringAt`, recorded by the gateway on every completed watering). A missing, stale (> 2 min) or
+  incomplete input suppresses the forecast; `/status` then shows `warming-up` or `stale-input`.
+- Model: the release named in `edge-ml/models/forecast/active.json` (trained in `model/forecast`), reloaded within a
+  minute when it changes; `active.json` also keeps the previous release for rollback (`model/forecast/deploy.py`).
+- Node-RED publishes one `up/forecast` message per zone (`msgId` = gateway + zone + reading time) through the same
+  offline buffer as the telemetry, and shows the last forecasts in `GET /status` → `forecast`.
+- Every forecast is logged in `edge-ml/state/forecast-log.csv` (time, zone, model, current, predicted, minutes since
+  watering) for the later review of forecast errors.
+
 ## Local API of the gateway (W3C Web of Things)
 
 | Request | Result |
 |---|---|
-| `GET /status` | gateway state (cloud link, field node, buffer, configuration, last readings) |
+| `GET /status` | gateway state (cloud link, field node, buffer, configuration, last readings, last watering, forecast) |
+| `POST /edge/forecast` | used by the forecast service (local only) |
 | `GET /things/esp32-node` | Thing Description (`application/td+json`) |
 | `GET /things/esp32-node/properties/{name}` | `soilMoistureA`, `soilMoistureB`, `airTemperature`, `airHumidity`, `waterAvailable`, `pumpState` |
 | `POST /things/esp32-node/actions/irrigate` | `{"durationSec": 5}`, same checks as the cloud commands |
@@ -63,4 +84,5 @@ ESP32 field node  --WebSocket/JSON-->  Node-RED gateway  --MQTT v5/TLS-->  Mosqu
 ## Not done yet
 
 - The local link uses `ws://` and `http://`; the specification asks for WSS/HTTPS with provisioned certificates.
-- Camera loop, soil-moisture forecast and YOLO detection (`DEPLOY_MODEL` is answered with REJECTED for now).
+- Camera loop and YOLO detection (Mahdi); `DEPLOY_MODEL` from the cloud is answered with REJECTED for now
+  (forecast releases are installed with `model/forecast/deploy.py`).

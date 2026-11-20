@@ -40,3 +40,8 @@ Thumbs.db
 /iot/gateway/.flows*.backup
 /iot/gateway/lib/
 /iot/esp32-node/.pio/
+
+# Edge ML runtime state and training data (the release manifests record the dataset checksums)
+/iot/edge-ml/state/
+/model/forecast/data/raw/
+__pycache__/

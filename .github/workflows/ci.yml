@@ -50,3 +50,42 @@ jobs:
 
       - name: Deployment scripts parse
         run: for f in deploy/linux/*.sh; do bash -n "$f"; done
+
+  forecast:
+    name: Forecast model and gateway service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: model/forecast/requirements.txt
+
+      - name: Unit tests (windows, split, exported model = scikit-learn)
+        working-directory: model/forecast
+        run: |
+          pip install -r requirements.txt
+          python -m unittest discover -s tests -v
+
+      - name: The active gateway release loads and passes its checks
+        working-directory: iot/edge-ml
+        run: |
+          python -m py_compile forecast_service.py
+          python - <<'PY'
+          import hashlib, json, os
+          from forecast_model import ForecastModel, features
+          active = json.load(open("models/forecast/active.json"))["active"]
+          model = ForecastModel.load(f"models/forecast/{active}.json")
+          release = f"../../model/forecast/releases/{active}/manifest.json"
+          if os.path.exists(release):
+              digest = hashlib.sha256(open(f"models/forecast/{active}.json", "rb").read()).hexdigest()
+              assert digest == json.load(open(release))["modelSha256"], "installed model differs from its release"
+          cases = [(45, 45, 45, 24, 60, 600), (35, 45, 45, 24, 60, 600), (70, 45, 45, 24, 60, 5)]
+          for case in cases:
+              value = model.predict(features(*case))
+              assert 0 <= value <= 100, (case, value)
+              print(case, "->", round(value, 2))
+          assert model.predict(features(45, 45, 45, 24, 60, 600)) == 45, "steady soil must stay steady"
+          PY
