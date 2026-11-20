@@ -12,8 +12,8 @@
 
   <modules>
     <module>core</module>   <!-- shared: base entities, UUIDv7, ETag, JWT verification, error mappers -->
-    <module>iam</module>    <!-- iam.war: OAuth 2.0 authorization server (Authorization Code + PKCE) -->
-    <module>api</module>    <!-- greenpilot.war: REST + WebSocket + MQTT middleware -->
+    <module>iam</module>    <!-- iam-1.0.war: OAuth 2.0 authorization server (Authorization Code + PKCE) -->
+    <module>api</module>    <!-- api-1.0.war: REST + WebSocket + MQTT middleware -->
   </modules>
 
   <properties>
@@ -24,6 +24,8 @@
     <jnosql.version>1.1.16</jnosql.version>
     <mongodb.driver.version>5.9.1</mongodb.driver.version>
     <paho.version>1.2.5</paho.version>
+    <junit.version>5.13.4</junit.version>
+    <parsson.version>1.1.9</parsson.version>
   </properties>
 
   <dependencyManagement>
@@ -62,6 +64,19 @@
         <artifactId>core</artifactId>
         <version>${project.version}</version>
       </dependency>
+      <!-- Tests: JUnit 5, and a Jakarta JSON implementation (WildFly provides it at runtime) -->
+      <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter</artifactId>
+        <version>${junit.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.parsson</groupId>
+        <artifactId>parsson</artifactId>
+        <version>${parsson.version}</version>
+        <scope>test</scope>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -80,6 +95,11 @@
           <configuration>
             <failOnMissingWebXml>false</failOnMissingWebXml>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>3.5.3</version>
         </plugin>
       </plugins>
     </pluginManagement>

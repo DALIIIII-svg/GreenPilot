@@ -355,7 +355,7 @@
         "type": "function",
         "z": "tab",
         "name": "Gateway status",
-        "func": "const now = Date.now();\nmsg.payload = {\n    gatewayId: env.get('GW_ID'),\n    cloudConnected: global.get('cloudUp') === true,\n    fieldNodeOnline: now - (global.get('fieldNodeSeenAt') || 0) < 90000,\n    bufferedMessages: (global.get('outbox') || []).length,\n    config: global.get('config'),\n    latest: global.get('latest') || null\n};\nreturn msg;\n",
+        "func": "const now = Date.now();\nmsg.payload = {\n    gatewayId: env.get('GW_ID'),\n    cloudConnected: global.get('cloudUp') === true,\n    fieldNodeOnline: now - (global.get('fieldNodeSeenAt') || 0) < 90000,\n    bufferedMessages: (global.get('outbox') || []).length,\n    config: global.get('config'),\n    latest: global.get('latest') || null,\n    lastWateringAt: global.get('lastWateringAt') || null,\n    forecast: global.get('forecast') || null\n};\nreturn msg;\n",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -526,6 +526,68 @@
         "headers": {},
         "x": 590,
         "y": 900,
+        "wires": []
+    },
+    {
+        "id": "c_ml",
+        "type": "comment",
+        "z": "tab",
+        "name": "Edge ML: soil-moisture forecast (iot/edge-ml/forecast_service.py)",
+        "info": "",
+        "x": 250,
+        "y": 980,
+        "wires": []
+    },
+    {
+        "id": "http_edge_forecast",
+        "type": "http in",
+        "z": "tab",
+        "name": "",
+        "url": "/edge/forecast",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 150,
+        "y": 1040,
+        "wires": [
+            [
+                "fn_edge_forecast"
+            ]
+        ]
+    },
+    {
+        "id": "fn_edge_forecast",
+        "type": "function",
+        "z": "tab",
+        "name": "Forecast to cloud",
+        "func": "const body = msg.payload || {};\nconst gw = env.get('GW_ID');\nconst horizonMin = Number.isInteger(body.horizonMin) ? body.horizonMin : 30;\nconst forecasts = (Array.isArray(body.forecasts) ? body.forecasts : []).filter(f =>\n    f && ['A', 'B'].includes(f.zoneId) && Number.isFinite(f.predicted) && !Number.isNaN(Date.parse(f.ts)));\n\nglobal.set('forecast', {\n    state: String(body.state || 'unknown'),\n    modelVersion: body.modelVersion || null,\n    horizonMin,\n    minutesLeft: Number.isFinite(body.minutesLeft) ? body.minutesLeft : null,\n    at: Date.now(),\n    forecasts\n});\n\nconst uplinks = forecasts.map(f => ({\n    topic: `greenpilot/${gw}/up/forecast`,\n    payload: {\n        msgId: `${gw}-forecast-${f.zoneId}-${Date.parse(f.ts)}`,\n        zoneId: f.zoneId,\n        ts: f.ts,\n        horizonMin,\n        predicted: f.predicted,\n        baseline: Number.isFinite(f.baseline) ? f.baseline : null,\n        modelVersion: body.modelVersion || null\n    }\n}));\n\nif (forecasts.length) {\n    node.status({ fill: 'green', shape: 'dot', text: forecasts.map(f => `${f.zoneId} ${f.predicted}%`).join('  ') + ` (+${horizonMin} min)` });\n} else {\n    node.status({ fill: 'grey', shape: 'ring', text: body.state === 'warming-up' ? `warming up, ${body.minutesLeft} min left` : String(body.state) });\n}\nmsg.statusCode = 202;\nmsg.payload = { accepted: uplinks.length };\nreturn [uplinks, msg];\n",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 380,
+        "y": 1040,
+        "wires": [
+            [
+                "fn_uplink"
+            ],
+            [
+                "http_res_5"
+            ]
+        ],
+        "info": "Receives the forecasts of the Python service, keeps the last ones for /status and publishes each zone's forecast on up/forecast through the buffered uplink."
+    },
+    {
+        "id": "http_res_5",
+        "type": "http response",
+        "z": "tab",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 590,
+        "y": 1060,
         "wires": []
     }
 ]

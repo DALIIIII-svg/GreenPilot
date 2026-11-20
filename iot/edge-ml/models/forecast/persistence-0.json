@@ -1,0 +1,1 @@
+{"version": "persistence-0", "kind": "persistence", "features": ["moisture", "change_10min", "change_20min", "air_temperature", "air_humidity", "log_minutes_since_watering"], "horizonMin": 30, "clip": [0.0, 100.0]}

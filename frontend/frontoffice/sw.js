@@ -1,4 +1,4 @@
-const CACHE = 'greenpilot-frontoffice-v4';
+const CACHE = 'greenpilot-frontoffice-v5';
 const SHELL = [
   './',
   'index.html',

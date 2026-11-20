@@ -1,0 +1,22 @@
+# GreenPilot server settings, read by configure.sh, deploy.sh and the certificate hook.
+# Copy to /etc/greenpilot/greenpilot.conf, fill in, and keep it out of git (chmod 600).
+
+# Public domain: user.<DOMAIN>, admin.<DOMAIN>, api.<DOMAIN>, iam.<DOMAIN> and mqtt.<DOMAIN> must point to the server.
+DOMAIN=greenpilot.duckdns.org
+
+# Let's Encrypt account (expiry warnings are sent here)
+LETSENCRYPT_EMAIL=you@example.com
+
+# Administrator created by the IAM on its first start
+IAM_ADMIN_USERNAME=admin@greenpilot.local
+IAM_ADMIN_PASSWORD=
+
+# MQTT accounts: the backend, and one "user:password" per gateway (separated by spaces)
+MQTT_BACKEND_PASSWORD=
+MQTT_GATEWAYS="pi-01:"
+
+# Password of the keystores made on the server (HTTPS certificate, MQTT truststore)
+KEYSTORE_PASSWORD=
+
+# WildFly heap: 1g on a 1 GB VM (with swap), 2g on a 4 GB VM
+WILDFLY_HEAP=1g
