@@ -9,8 +9,11 @@ GreenPilot/
 │   ├── iam/   -> iam-1.0.war    OAuth 2.0 authorization server (Authorization Code + PKCE), https://iam.<domain>/
 │   └── api/   -> api-1.0.war    REST + WebSocket + MQTT v5 middleware, https://api.<domain>/
 ├── frontend/                    Front Office and Back Office PWAs (plain HTML/CSS/JavaScript)
-├── iot/                         edge side: ESP32 firmware (Wokwi), Node-RED gateway, field node simulator
+├── iot/                         edge side: ESP32 firmware (Wokwi), Node-RED gateway, simulator, gateway ML services
+├── model/                       machine learning: forecast/ (soil moisture, t + 30 min), vision/ (leaf disease)
 ├── setup/                       Windows scripts: install, certificates, MQTT ACL, build, run, WildFly hosts (wildfly/)
+├── deploy/                      Linux server: installation, configuration and deployment scripts (see deploy/README.md)
+├── .github/workflows/           CI (build + tests on every pull request) and Deploy (to the Linux server)
 ├── samples/                     test data + end-to-end test (simulates the Pi and the PWA)
 └── tools/                       JDK 25, Maven, WildFly 41, certificates, broker config (generated, not in git)
 ```
@@ -51,6 +54,7 @@ powershell -ExecutionPolicy Bypass -File .\setup\configure-wildfly-hosts.ps1   #
 powershell -ExecutionPolicy Bypass -File .\samples\test-flow.ps1       # optional: sample site, readings and an incident
 powershell -ExecutionPolicy Bypass -File .\setup\start-gateway.ps1     # window 4: Node-RED gateway (plays the Raspberry Pi)
 powershell -ExecutionPolicy Bypass -File .\setup\start-esp32-sim.ps1   # window 5: simulated ESP32 (or Wokwi, see iot/README.md)
+powershell -ExecutionPolicy Bypass -File .\setup\start-forecast.ps1    # window 6: soil-moisture forecast on the gateway (Python 3)
 ```
 
 Open <https://admin.greenpilot.local> with the development administrator `admin@greenpilot.local` / `admin123`,
@@ -61,6 +65,14 @@ A minimal test page is served by the API at <https://api.greenpilot.local/live-d
 
 Until the greenhouse hardware is available, the ESP32 field node runs in the Wokwi simulator (or `iot/simulator`) and Node-RED plays the Raspberry Pi gateway between the ESP32 and the MQTT broker. Details, messages and the gateway's W3C WoT API are in [`iot/README.md`](iot/README.md).
 
+## Machine learning
+
+- **Soil-moisture forecast** ([`model/forecast`](model/forecast/README.md)): 30 minutes ahead, per zone, on the gateway.
+  Trained on a public irrigation dataset until our own cycles exist; gradient-boosted trees beat the persistence
+  baseline on held-out cycles (test MAE 0.111 vs 0.159, RMSE 0.781 vs 1.084) and are released; persistence would
+  have been released otherwise. Shown on the dashboard and compared with the measurements in History.
+- **Leaf disease** ([`model/vision`](model/vision/README.md)): YOLO on bell pepper leaves (healthy / bacterial spot).
+
 ## WildFly hosting (CI/CD)
 
 The host configuration uses the CLI scripts and per-environment property files of [`setup/wildfly/`](setup/wildfly/README.md):
@@ -68,6 +80,15 @@ The host configuration uses the CLI scripts and per-environment property files o
 plus `https.cli` (certificate) and `reset-hosts.cli` (so the configuration can be applied again). They also add HSTS,
 HTTP to HTTPS redirection, the SPA router, `Cache-Control`, `X-Content-Type-Options` and the CORS headers, which are sent only to
 `https://` origins of the configured domain. The applications therefore no longer add CORS headers themselves.
+
+## CI/CD pipeline (GitHub Actions)
+
+- **CI** (`.github/workflows/ci.yml`): on every pull request to `main` and every push to `main`, GitHub compiles the three
+  modules with Java 25, runs the JUnit tests (`mvn verify`), keeps the two WARs as artifacts, and checks the gateway files.
+  Run the same build locally with `mvn -f middleware/pom.xml verify`.
+- **Deploy** (`.github/workflows/deploy.yml`): builds and tests, then copies the release (WARs, front-ends, `setup/wildfly`)
+  to the Linux server over SSH and runs `deploy/linux/deploy.sh`, which applies the WildFly host scripts with the production
+  properties. Started by hand for now; server setup and secrets in [`deploy/README.md`](deploy/README.md).
 
 ## Front-end (PWA)
 
@@ -151,4 +172,4 @@ Messages are validated (JSON-B + Bean Validation); ids are deterministic so a re
 - Dev only: signing key stored in MongoDB, default passwords in `setup/env.ps1`.
 - `Instant` fields are stored by JNoSQL as ISO-8601 text (sortable); two values inside the same second may sort slightly off.
 - Development HTTPS uses a self-signed CA (`setup/make-certs.ps1`); production needs a real certificate in `https-prod.properties`.
-- Automated tests (JUnit + Testcontainers) and CI.
+- Unit tests cover tokens, PKCE, passwords, ids, ETags and MQTT topics; no integration tests against MongoDB/MQTT yet.

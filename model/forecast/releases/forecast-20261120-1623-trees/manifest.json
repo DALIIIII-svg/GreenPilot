@@ -1,0 +1,227 @@
+{
+  "version": "forecast-20261120-1623-trees",
+  "kind": "trees",
+  "createdAt": "2026-11-20T16:23:12.390616+00:00",
+  "horizonMin": 30,
+  "stepMin": 10,
+  "lagsMin": [
+    10,
+    20
+  ],
+  "features": [
+    "moisture",
+    "change_10min",
+    "change_20min",
+    "air_temperature",
+    "air_humidity",
+    "log_minutes_since_watering"
+  ],
+  "target": "moisture(t + 30 min) - moisture(t), relative soil moisture (0-100) per probe",
+  "dataset": {
+    "name": "Soil Moisture, Irrigation Actuator and Weather Dataset from a Multi-Sector Precision-Irrigation Field Trial (Arnesano, Apulia, Italy, 2025)",
+    "url": "https://data.mendeley.com/datasets/c837v6p8ph/2",
+    "doi": "10.17632/c837v6p8ph.2",
+    "license": "CC BY 4.0 (weather: Open-Meteo / ERA5, CC BY 4.0)",
+    "probes": {
+      "sector-1": "tomato, open field",
+      "sector-2": "tomato, open field",
+      "sector-3": "tomato, pots",
+      "sector-4": "zucchini",
+      "sector-5": "blueberry"
+    },
+    "files": {
+      "Soil Moisture, Irrigation Actuator and Weather Dat.zip": "a6043b8e44db7adfdfc5a7f5ff8157a0ed38d29a861a1555dcd73d0cec9853e8"
+    },
+    "inputs": "merged 10-min tables; moisture = soil_moisture (cleaned, not interpolated); air = weather_temp / weather_humidity (ERA5); watering = valve open or rain >= 0.1 mm"
+  },
+  "split": {
+    "rule": "per probe, chronological by drying cycle",
+    "testShare": 0.2,
+    "validationShare": 0.15,
+    "windows": {
+      "train": 13313,
+      "validation": 2358,
+      "test": 5908
+    }
+  },
+  "selection": "family and hyper-parameters with the lowest validation RMSE",
+  "releaseGate": {
+    "rule": "test MAE < persistence test MAE",
+    "chosenOnValidation": "trees(huber,depth=3,n=200)",
+    "beatsPersistence": true
+  },
+  "movingWindow": "|moisture(t+30) - moisture(t)| >= 1.0",
+  "results": {
+    "persistence": {
+      "name": "persistence",
+      "test": {
+        "mae": 0.15944482058226134,
+        "rmse": 1.0842942286446853,
+        "n": 5908,
+        "maeMoving": 2.8373493975903616,
+        "nMoving": 332
+      },
+      "byProbe": {
+        "sector-1": {
+          "mae": 0.19532908704883228,
+          "rmse": 1.2386783816028468,
+          "n": 1413,
+          "maeMoving": 3.45,
+          "nMoving": 80
+        },
+        "sector-2": {
+          "mae": 0.0854014598540146,
+          "rmse": 0.639913315297385,
+          "n": 1370,
+          "maeMoving": 1.8,
+          "nMoving": 65
+        },
+        "sector-3": {
+          "mae": 7.5,
+          "rmse": 9.924716620639604,
+          "n": 2,
+          "maeMoving": 7.5,
+          "nMoving": 2
+        },
+        "sector-4": {
+          "mae": 0.2579022988505747,
+          "rmse": 1.571797053379187,
+          "n": 1392,
+          "maeMoving": 4.662337662337662,
+          "nMoving": 77
+        },
+        "sector-5": {
+          "mae": 0.10109763142692085,
+          "rmse": 0.5793480269556264,
+          "n": 1731,
+          "maeMoving": 1.6203703703703705,
+          "nMoving": 108
+        }
+      },
+      "validation": {
+        "mae": 0.6140797285835454,
+        "rmse": 1.900403956879026,
+        "n": 2358,
+        "maeMoving": 2.9252525252525254,
+        "nMoving": 495
+      }
+    },
+    "linear": {
+      "name": "ridge(alpha=0.1)",
+      "deadband": 0.75,
+      "test": {
+        "mae": 0.16066361028425372,
+        "rmse": 0.8988044341175022,
+        "n": 5908,
+        "maeMoving": 2.2597703204768096,
+        "nMoving": 332
+      },
+      "byProbe": {
+        "sector-1": {
+          "mae": 0.1905560170397407,
+          "rmse": 1.0074151798076854,
+          "n": 1413,
+          "maeMoving": 2.6290620652676,
+          "nMoving": 80
+        },
+        "sector-2": {
+          "mae": 0.09271432368800511,
+          "rmse": 0.5730826396844169,
+          "n": 1370,
+          "maeMoving": 1.6448537648548518,
+          "nMoving": 65
+        },
+        "sector-3": {
+          "mae": 7.783132338256777,
+          "rmse": 9.474079447291821,
+          "n": 2,
+          "maeMoving": 7.783132338256777,
+          "nMoving": 2
+        },
+        "sector-4": {
+          "mae": 0.2596334973278016,
+          "rmse": 1.274689811897432,
+          "n": 1392,
+          "maeMoving": 3.4655184939494137,
+          "nMoving": 77
+        },
+        "sector-5": {
+          "mae": 0.10164658640834018,
+          "rmse": 0.508458431169398,
+          "n": 1731,
+          "maeMoving": 1.3943712754695272,
+          "nMoving": 108
+        }
+      },
+      "validation": {
+        "mae": 0.6721379656191496,
+        "rmse": 1.6491590305611217,
+        "n": 2358,
+        "maeMoving": 2.492999627588926,
+        "nMoving": 495
+      }
+    },
+    "trees": {
+      "name": "trees(huber,depth=3,n=200)",
+      "deadband": 0.5,
+      "test": {
+        "mae": 0.1105148564109856,
+        "rmse": 0.7809632708280441,
+        "n": 5908,
+        "maeMoving": 1.9342714760842012,
+        "nMoving": 332
+      },
+      "byProbe": {
+        "sector-1": {
+          "mae": 0.12430787097084434,
+          "rmse": 0.8701950617844263,
+          "n": 1413,
+          "maeMoving": 2.1520570621647437,
+          "nMoving": 80
+        },
+        "sector-2": {
+          "mae": 0.06845037980072388,
+          "rmse": 0.507593646041082,
+          "n": 1370,
+          "maeMoving": 1.4427233896460265,
+          "nMoving": 65
+        },
+        "sector-3": {
+          "mae": 6.715482731037206,
+          "rmse": 7.361225421352707,
+          "n": 2,
+          "maeMoving": 6.715482731037206,
+          "nMoving": 2
+        },
+        "sector-4": {
+          "mae": 0.1629352153602905,
+          "rmse": 1.1013966367329613,
+          "n": 1392,
+          "maeMoving": 2.85122902433766,
+          "nMoving": 77
+        },
+        "sector-5": {
+          "mae": 0.08276195518411868,
+          "rmse": 0.47061175739462985,
+          "n": 1731,
+          "maeMoving": 1.3264902261454576,
+          "nMoving": 108
+        }
+      },
+      "validation": {
+        "mae": 0.506532664753461,
+        "rmse": 1.4832656535360285,
+        "n": 2358,
+        "maeMoving": 1.997624747519052,
+        "nMoving": 495
+      }
+    }
+  },
+  "environment": {
+    "python": "3.13.18",
+    "scikit-learn": "1.9.1",
+    "pandas": "3.0.5",
+    "numpy": "2.5.3"
+  },
+  "modelSha256": "4be79ed8a655624d47e0346feedbc0a62f1494be4701ca99e28ee9c1bbe0b5ba"
+}

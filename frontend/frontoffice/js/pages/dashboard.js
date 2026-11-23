@@ -18,6 +18,26 @@ function sensorCard(title, r, { value, warn, extra } = {}) {
     extra);
 }
 
+// A forecast older than this is shown greyed out: the gateway stopped forecasting (stale or missing readings).
+const FORECAST_FRESH_SEC = 10 * 60;
+
+function forecastLine(forecast, low) {
+  const horizon = forecast.horizonMin || 30;
+  const ageSec = Math.max(0, Math.round((Date.now() - Date.parse(forecast.ts)) / 1000));
+  const change = forecast.baseline == null ? null : forecast.predicted - forecast.baseline;
+  const trend = change == null || Math.abs(change) < 0.5 ? 'steady' : change < 0 ? 'drying' : 'wetter';
+  const arrow = { steady: '→', drying: '↘', wetter: '↗' }[trend];
+  const dry = low && forecast.predicted < low;
+  const stale = ageSec > FORECAST_FRESH_SEC;
+  const classes = ['card-forecast', dry && !stale ? 'card-forecast-warn' : '', stale ? 'card-forecast-stale' : ''].filter(Boolean).join(' ');
+  return h('div', { class: classes, title: forecast.modelVersion ? `Model ${forecast.modelVersion}` : null },
+    h('p', {}, `In ${horizon} min `, h('strong', {}, `${round(forecast.predicted)} %`),
+      ` ${arrow}`, change == null ? null : ` ${change > 0 ? '+' : ''}${round(change)}`),
+    h('p', { class: 'card-meta' },
+      dry && !stale ? `Below the ${low} % threshold · ` : '',
+      stale ? `Last forecast ${fmtAge(ageSec)}` : `Forecast ${fmtAge(ageSec)}`));
+}
+
 function renderSensors(box, state) {
   const site = state.site;
   const low = site.thresholds?.soilMoistureLowPct;
@@ -25,8 +45,8 @@ function renderSensors(box, state) {
     const r = reading(state, 'soil_moisture', zone.id);
     const forecast = state.forecasts.find((f) => f.zoneId === zone.id);
     const extra = forecast
-      ? h('p', { class: 'card-forecast' }, `In ${forecast.horizonMin || 30} min: ${round(forecast.predicted)} %`)
-      : null;
+      ? forecastLine(forecast, low)
+      : h('p', { class: 'card-forecast card-forecast-stale' }, 'No forecast yet');
     return sensorCard(`Soil moisture · ${zone.name || zone.id}`, r, { warn: r && low && r.value < low, extra });
   });
   const reservoir = reading(state, 'reservoir');
@@ -41,17 +61,32 @@ function renderSensors(box, state) {
   fill(box, ...cards);
 }
 
+const CHART_PERIODS = { '3h': 3 * 3600000, '24h': 86400000 };
+let chartPeriod = '3h';
+
+// Measured moisture per zone, with each forecast drawn at the time it is about to (dashed, reaching into the future).
 async function renderChart(box, site) {
-  const since = new Date(Date.now() - 86400000).toISOString();
+  const since = new Date(Date.now() - CHART_PERIODS[chartPeriod]).toISOString();
+  const picker = h('div', { class: 'segmented', role: 'group', 'aria-label': 'Period' },
+    Object.keys(CHART_PERIODS).map((key) => h('button', {
+      class: `btn btn-small${key === chartPeriod ? ' active' : ''}`, type: 'button', 'aria-pressed': String(key === chartPeriod),
+      onclick: () => { chartPeriod = key; renderChart(box, site); },
+    }, key)));
+  const head = h('div', { class: 'panel-head' }, h('h2', {}, 'Soil moisture'), picker);
   try {
-    const rows = await api.get(`/measurements${qs({ siteId: site.id, type: 'soil_moisture', from: since, limit: 2000 })}`);
-    const series = (site.zones || []).map((zone) => ({
-      name: zone.name || zone.id,
-      points: rows.filter((r) => r.zoneId === zone.id).map((r) => ({ t: Date.parse(r.ts), v: r.value })),
-    }));
-    fill(box, h('h2', {}, 'Soil moisture, last 24 h'), lineChart(series, { unit: '%' }));
+    const [rows, forecasts] = await Promise.all([
+      api.get(`/measurements${qs({ siteId: site.id, type: 'soil_moisture', from: since, limit: 5000 })}`),
+      api.get(`/forecasts${qs({ siteId: site.id, from: since, limit: 5000 })}`).catch(() => []),
+    ]);
+    const series = (site.zones || []).flatMap((zone) => [
+      { name: `${zone.name || zone.id}`, points: rows.filter((r) => r.zoneId === zone.id).map((r) => ({ t: Date.parse(r.ts), v: r.value })) },
+      { name: `${zone.name || zone.id} forecast`, dashed: true,
+        points: forecasts.filter((f) => f.zoneId === zone.id).map((f) => ({ t: Date.parse(f.ts) + (f.horizonMin || 30) * 60000, v: f.predicted })) },
+    ]).filter((s) => s.points.length);
+    fill(box, head, lineChart(series, { unit: '%' }),
+      forecasts.length ? h('p', { class: 'muted small' }, 'Dashed: what the gateway predicted 30 min earlier for that time.') : null);
   } catch (error) {
-    fill(box, h('h2', {}, 'Soil moisture, last 24 h'), errorBox(error));
+    fill(box, head, errorBox(error));
   }
 }
 
@@ -123,7 +158,7 @@ export async function render(view) {
     clearTimeout(timer);
     timer = setTimeout(() => {
       reload();
-      if (message.type === 'telemetry') renderChart(chart, site);
+      if (message.type === 'telemetry' || message.type === 'forecast') renderChart(chart, site);
     }, 400);
   });
   return () => {

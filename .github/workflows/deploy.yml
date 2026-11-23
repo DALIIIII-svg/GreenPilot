@@ -1,0 +1,61 @@
+name: Deploy
+
+# Started by hand (Actions > Deploy > Run workflow) until the server exists.
+# Needs the repository secrets VM_HOST, VM_USER and VM_SSH_KEY (see deploy/README.md).
+on:
+  workflow_dispatch:
+    inputs:
+      hosts:
+        description: Also apply the WildFly host configuration (first deployment, or after changing setup/wildfly)
+        type: boolean
+        default: false
+
+concurrency: deploy
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Build and test
+        run: mvn -B -ntp -f middleware/pom.xml verify
+
+      - name: Assemble the release
+        run: |
+          mkdir -p release/frontend release/setup
+          cp middleware/api/target/api-1.0.war middleware/iam/target/iam-1.0.war release/
+          cp -r frontend/frontoffice frontend/backoffice release/frontend/
+          cp -r setup/wildfly release/setup/
+          cp -r deploy release/
+          tar czf release.tgz -C release .
+
+      - name: Copy to the server and deploy
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USER: ${{ secrets.VM_USER }}
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+          VM_KNOWN_HOSTS: ${{ secrets.VM_KNOWN_HOSTS }}
+          HOSTS_FLAG: ${{ inputs.hosts && '--hosts' || '' }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VM_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          if [ -n "$VM_KNOWN_HOSTS" ]; then
+            printf '%s\n' "$VM_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -H "$VM_HOST" > ~/.ssh/known_hosts
+          fi
+          ssh_opts="-i $HOME/.ssh/deploy_key -o StrictHostKeyChecking=yes"
+          scp $ssh_opts release.tgz "$VM_USER@$VM_HOST:/tmp/greenpilot-release.tgz"
+          ssh $ssh_opts "$VM_USER@$VM_HOST" "set -e
+            rm -rf /tmp/greenpilot-release && mkdir /tmp/greenpilot-release
+            tar xzf /tmp/greenpilot-release.tgz -C /tmp/greenpilot-release
+            sudo bash /tmp/greenpilot-release/deploy/linux/deploy.sh $HOSTS_FLAG /tmp/greenpilot-release"
